@@ -6,8 +6,8 @@ Minetest mod "Stamina"
 
 
 About this mod:
-~~~~~~~~~~~~~~~
-This mod adds a stamina, or "hunger" echanic to Minetest. Actions like
+---------------
+This mod adds a stamina, or "hunger" mechanic to Minetest. Actions like
 crafting, walking, digging or fighting make the player exhausted. When
 enough exhaustion has been accumulated, the player gets more hungry,
 and loses stamina.
@@ -21,9 +21,9 @@ is. More bread pieces means more stamina.
 
 
 For Modders:
-~~~~~~~~~~~~
+------------
 This mod intercepts minetest.item_eat(), and applies the hp_change
-as staminachange. The value can be positive (increase stamina) or
+as stamina change. The value can be positive (increase stamina) or
 negative (periodically damage the player by 1 hp).
 
 Callbacks that are registered via minetest.register_on_item_eat()
@@ -33,7 +33,7 @@ parameter of your function then.
 
 
 License:
-~~~~~~~~
+--------
 Code:
 - all code LGPL-2.1+
 Textures:
