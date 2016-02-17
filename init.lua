@@ -20,7 +20,6 @@ STAMINA_HEAL_LVL = 5		-- lower level of saturation needed to get healed
 STAMINA_STARVE = 1		-- number of HP player gets damaged by stamina after STAMINA_HEALTH_TICK
 STAMINA_STARVE_LVL = 3		-- level of staturation that causes starving
 
-STAMINA_MAX = 30		-- maximum level of saturation
 STAMINA_VISUAL_MAX = 20		-- hud bar extends only to 20
 
 
@@ -31,13 +30,13 @@ local function stamina_read(player)
 	end
 
 	-- itemstack storage is offest by 1 to make the math work
-	local hgp = inv:get_stack("stamina", 1):get_count()
-	if hgp == 0 then
-		hgp = 21
-		inv:set_stack("stamina", 1, ItemStack({name = ":", count = hgp}))
+	local v = inv:get_stack("stamina", 1):get_count()
+	if v == 0 then
+		v = 21
+		inv:set_stack("stamina", 1, ItemStack({name = ":", count = v}))
 	end
 
-	return math.min(STAMINA_MAX + 1, hgp) - 1
+	return v - 1
 end
 
 local function stamina_save(player)
@@ -48,7 +47,6 @@ local function stamina_save(player)
 	local name = player:get_player_name()
 	local level = stamina_players[name].level
 
-	level = math.min(STAMINA_MAX, level)
 	level = math.max(level, 0)
 
 	inv:set_stack("stamina", 1, ItemStack({name = ":", count = level + 1}))
@@ -211,16 +209,15 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 	end
 
 	local level = tonumber(stamina_players[name].level or 0)
-	if level >= STAMINA_MAX then
+	if level >= STAMINA_VISUAL_MAX then
 		return itemstack
 	end
 
-	if level < STAMINA_MAX and hp_change > 0 then
+	if hp_change > 0 then
 		level = level + hp_change
 		stamina_update(user, level)
-	end
-
-	if hp_change < 0 then
+	else
+		-- assume hp_change < 0.
 		user:hud_change(stamina_players[name].hud_id, "text", "stamina_hud_poison.png")
 		poison_player(2.0, -hp_change, 0, user)
 	end
