@@ -8,8 +8,11 @@ STAMINA_HEALTH_TICK = 4		-- time in seconds after player gets healed/damaged
 STAMINA_MOVE_TICK = 0.5		-- time in seconds after the movement is checked
 
 STAMINA_EXHAUST_DIG = 3		-- exhaustion increased this value after digged node
-STAMINA_EXHAUST_PLACE = 1	-- exhaustion increased this value after placed
-STAMINA_EXHAUST_MOVE = 1.5	-- exhaustion increased this value if player movement detected
+STAMINA_EXHAUST_PLACE = 1	-- .. after digging node
+STAMINA_EXHAUST_MOVE = 1.5	-- .. if player movement detected
+STAMINA_EXHAUST_JUMP = 5	-- .. if jumping
+STAMINA_EXHAUST_CRAFT = 20	-- .. if player crafts
+STAMINA_EXHAUST_PUNCH = 40	-- .. if player punches another player
 STAMINA_EXHAUST_LVL = 160	-- at what exhaustion player saturation gets lowered
 
 STAMINA_HEAL = 1		-- number of HP player gets healed after STAMINA_HEALTH_TICK
@@ -67,73 +70,38 @@ local function stamina_update(player, level)
 	stamina_save(player)
 end
 
-local function stamina_node_actions(pos, oldnode, player, ext)
+local function exhaust_player(player, v)
 	if not player or not player:is_player() then
 		return
 	end
+
 	local name = player:get_player_name()
-	if not name or not stamina_players[name] then
+	if not name then
 		return
 	end
 
-	local exhaust = stamina_players[name].exhaust
-	if not exhaust then
-		stamina_players[name].exhaust = 0
+	local s = stamina_players[name]
+	if not s then
+		return
 	end
 
-	local new = STAMINA_EXHAUST_PLACE
-
-	-- placenode event
-	if not ext then
-		new = STAMINA_EXHAUST_DIG
+	local e = s.exhaust
+	if not e then
+		s.exhaust = 0
 	end
 
-	-- assume its send by action_timer(globalstep)
-	if not pos and not oldnode then
-		new = STAMINA_EXHAUST_MOVE
-	end
+	e = e + v
 
-	exhaust = exhaust + new
-
-	if exhaust > STAMINA_EXHAUST_LVL then
-		exhaust = 0
+	if e > STAMINA_EXHAUST_LVL then
+		e = 0
 		local h = tonumber(stamina_players[name].level)
 		if h > 0 then
 			stamina_update(player, h - 1)
 		end
 	end
 
-	stamina_players[name].exhaust = exhaust
+	s.exhaust = e
 end
-
-local function stamina_craft_actions(itemstack, player, old_craft_grid, craft_inv)
-	if not player or not player:is_player() then
-		return
-	end
-
-	local name = player:get_player_name()
-	if not name or not stamina_players[name] then
-		return
-	end
-
-	local exhaust = stamina_players[name].exhaust
-	if not exhaust then
-		stamina_players[name].exhaust = 0
-		return
-	end
-
-	if exhaust > STAMINA_EXHAUST_LVL then
-		exhaust = 0
-		local h = tonumber(stamina_players[name].level)
-		if h > 0 then
-			stamina_update(player, h - 1)
-		end
-	end
-
-	stamina_players[name].exhaust = exhaust
-end
-
--- TODO: add stamina for fighting
 
 -- Time based stamina functions
 local stamina_timer = 0
@@ -149,8 +117,10 @@ local function stamina_globaltimer(dtime)
 		for _,player in ipairs(minetest.get_connected_players()) do
 			local controls = player:get_player_control()
 			-- Determine if the player is walking
-			if controls.up or controls.down or controls.left or controls.right then
-				stamina_node_actions(nil, nil, player)
+			if controls.jump then
+				exhaust_player(player, STAMINA_EXHAUST_JUMP)
+			elseif controls.up or controls.down or controls.left or controls.right then
+				exhaust_player(player, STAMINA_EXHAUST_MOVE)
 			end
 		end
 		action_timer = 0
@@ -305,9 +275,19 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 
 	minetest.register_globalstep(stamina_globaltimer)
 
-	minetest.register_on_placenode(stamina_node_actions)
-	minetest.register_on_dignode(stamina_node_actions)
-	minetest.register_on_craft(stamina_craft_actions)
+	minetest.register_on_placenode(function(pos, oldnode, player, ext)
+		exhaust_player(player, STAMINA_EXHAUST_PLACE)
+	end)
+	minetest.register_on_dignode(function(pos, oldnode, player, ext)
+		exhaust_player(player, STAMINA_EXHAUST_DIG)
+	end)
+	minetest.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
+		exhaust_player(player, STAMINA_EXHAUST_CRAFT)
+	end)
+	minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
+		exhaust_player(hitter, STAMINA_EXHAUST_PUNCH)
+	end)
+
 	minetest.register_on_respawnplayer(function(player)
 		stamina_update(player, STAMINA_VISUAL_MAX)
 	end)
