@@ -4,6 +4,7 @@ stamina = {}
 local stamina_players = {}
 
 STAMINA_TICK = 800		-- time in seconds after that 1 stamina point is taken
+STAMINA_TICK_MIN = 4		-- stamina ticks won't reduce stamina below this level
 STAMINA_HEALTH_TICK = 4		-- time in seconds after player gets healed/damaged
 STAMINA_MOVE_TICK = 0.5		-- time in seconds after the movement is checked
 
@@ -102,12 +103,10 @@ local function exhaust_player(player, v)
 end
 
 -- Time based stamina functions
-local stamina_timer = 0
 local health_timer = 0
 local action_timer = 0
 
 local function stamina_globaltimer(dtime)
-	stamina_timer = stamina_timer + dtime
 	health_timer = health_timer + dtime
 	action_timer = action_timer + dtime
 
@@ -131,7 +130,7 @@ local function stamina_globaltimer(dtime)
 			local tab = stamina_players[name]
 			if tab then
 				local h = tab.level
-				if h > 0 then
+				if h > STAMINA_TICK_MIN then
 					stamina_update(player, h - 1)
 				end
 			end
