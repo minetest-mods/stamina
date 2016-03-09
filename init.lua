@@ -103,10 +103,12 @@ local function exhaust_player(player, v)
 end
 
 -- Time based stamina functions
+local stamina_timer = 0
 local health_timer = 0
 local action_timer = 0
 
 local function stamina_globaltimer(dtime)
+	stamina_timer = stamina_timer + dtime
 	health_timer = health_timer + dtime
 	action_timer = action_timer + dtime
 
