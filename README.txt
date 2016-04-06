@@ -20,6 +20,15 @@ stamina of the player. The stamina bar shows how well fed the player
 is. More bread pieces means more stamina.
 
 
+Q&A time: Why won't I move the stamina bar to the right?
+
+Answer: this conflicts with the builtin breath bar. To move the
+builtin breath bar, I basically have to entirely re-implement it
+in lua including timers to catch breath changes for each online
+player, which is all a waste of time, just to move a few pixels
+around.
+
+
 For Modders:
 ------------
 This mod intercepts minetest.item_eat(), and applies the hp_change
