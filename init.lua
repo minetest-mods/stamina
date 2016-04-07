@@ -265,7 +265,6 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 			number = level,
 			alignment = {x = -1, y = -1},
 			offset = {x = -266, y = -110},
-			background = "stamina_hud_bg.png",
 			max = 0,
 		})
 		stamina_players[name].hud_id = id
