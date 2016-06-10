@@ -23,6 +23,9 @@ STAMINA_STARVE_LVL = 3		-- level of staturation that causes starving
 
 STAMINA_VISUAL_MAX = 20		-- hud bar extends only to 20
 
+SPRINT_SPEED = 0.8 		-- how much faster player can run if satiated
+SPRINT_JUMP = 0.1 		-- how much higher player can jump if satiated
+SPRINT_DRAIN = 0.35 		-- how fast to drain satation while sprinting (0-1)
 
 local function stamina_read(player)
 	local inv = player:get_inventory()
@@ -102,6 +105,52 @@ local function exhaust_player(player, v)
 	s.exhaust = e
 end
 
+-- Sprint settings and function
+local enable_sprint = minetest.setting_getbool("sprint") ~= false
+local enable_sprint_particles = minetest.setting_getbool("sprint_particles") ~= false
+local pp = {}
+local armor_mod = minetest.get_modpath("3d_armor")
+
+function setSprinting(name, sprinting)
+
+	if stamina_players[name] then
+		stamina_players[name]["sprinting"] = sprinting
+
+		local player = minetest.get_player_by_name(name)
+		local def = armor.def[name] or nil -- get player physics from armor
+
+		pp.speed = def.speed or 1
+		pp.jump = def.jump or 1
+		pp.gravity = def.gravity or 1
+
+		if sprinting == true then
+
+			player:set_physics_override({
+				speed = pp.speed + SPRINT_SPEED,
+				jump = pp.jump + SPRINT_JUMP,
+				gravity = pp.gravity
+			})
+
+--print ("Speed:", pp.speed + SPRINT_SPEED, "Jump:", pp.jump + SPRINT_JUMP, "Gravity:", pp.gravity)
+
+		elseif sprinting == false then
+
+			player:set_physics_override({
+				speed = pp.speed,
+				jump = pp.jump,
+				gravity = pp.gravity
+			})
+
+--print ("Speed:", pp.speed, "Jump:", pp.jump, "Gravity:", pp.gravity)
+
+		end
+
+		return true
+	end
+
+	return false
+end
+
 -- Time based stamina functions
 local stamina_timer = 0
 local health_timer = 0
@@ -124,6 +173,72 @@ local function stamina_globaltimer(dtime)
 		end
 		action_timer = 0
 	end
+
+--- START sprint
+	if enable_sprint then
+
+		--Loop through all connected players
+		for name, info in pairs(stamina_players) do
+
+			local player = minetest.get_player_by_name(name)
+
+			-- check if player should be sprinting (hunger must be over 6 points)
+			if player
+			and player:get_player_control().aux1
+			and player:get_player_control().up
+			and not minetest.check_player_privs(player, {fast = true})
+			and stamina_players[name].level > 6 then
+
+				stamina_players[name]["shouldSprint"] = true
+				setSprinting(name, true)
+			
+				-- create particles behind player when sprinting
+				if enable_sprint_particles
+				and info["sprinting"] == true then
+
+					local pos = player:getpos()
+					local node = minetest.get_node({
+						x = pos.x,
+						y = pos.y - 1,
+						z = pos.z
+					})
+
+					if node.name ~= "air" then
+
+					minetest.add_particlespawner({
+						amount = 5,
+						time = 0.01,
+						minpos = {x = pos.x - 0.25, y = pos.y + 0.1, z = pos.z - 0.25},
+						maxpos = {x = pos.x + 0.25, y = pos.y + 0.1, z = pos.z + 0.25},
+						minvel = {x = -0.5, y = 1, z = -0.5},
+						maxvel = {x = 0.5, y = 2, z = 0.5},
+						minacc = {x = 0, y = -5, z = 0},
+						maxacc = {x = 0, y = -12, z = 0},
+						minexptime = 0.25,
+						maxexptime = 0.5,
+						minsize = 0.5,
+						maxsize = 1.0,
+						vertical = false,
+						collisiondetection = false,
+						texture = "default_dirt.png",
+					})
+
+					end
+				end
+
+				-- Lower the player's stamina when sprinting
+				if info["sprinting"] == true then
+					local level = tonumber(stamina_players[name].level)
+					level = level - (SPRINT_DRAIN * STAMINA_MOVE_TICK)
+					stamina_update(player, level)
+				end
+			else
+				stamina_players[name]["shouldSprint"] = false
+				setSprinting(name, false)
+			end
+		end
+	end
+-- END sprint
 
 	-- lower saturation by 1 point after STAMINA_TICK second(s)
 	if stamina_timer > STAMINA_TICK then
