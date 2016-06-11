@@ -117,7 +117,10 @@ function setSprinting(name, sprinting)
 		stamina_players[name]["sprinting"] = sprinting
 
 		local player = minetest.get_player_by_name(name)
-		local def = armor.def[name] or nil -- get player physics from armor
+		local def = {}
+		if armor_mod and armor and armor.def then
+			def = armor.def[name] -- get player physics from armor
+		end
 
 		pp.speed = def.speed or 1
 		pp.jump = def.jump or 1
