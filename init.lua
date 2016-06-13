@@ -72,6 +72,19 @@ local function stamina_update(player, level)
 	stamina_save(player)
 end
 
+-- global function for mods to amend stamina level
+stamina.change = function(player, change)
+	local name = player:get_player_name()
+	if not name or not change or change == 0 then
+		return false
+	end
+	local level = stamina_players[name].level + change
+	if level < 0 then level = 0 end
+	if level > STAMINA_VISUAL_MAX then level = STAMINA_VISUAL_MAX end
+	stamina_update(player, level)
+	return true
+end
+
 local function exhaust_player(player, v)
 	if not player or not player:is_player() then
 		return
@@ -116,8 +129,12 @@ function set_sprinting(name, sprinting)
 
 		local player = minetest.get_player_by_name(name)
 		local def = {}
+
 		if armor_mod and armor and armor.def then
-			def = armor.def[name] -- get player physics from armor
+			-- get player physics from armor
+			def.speed = armor.def[name].speed
+			def.jump = armor.def[name].jump
+			def.gravity = armor.def[name].gravity
 		end
 
 		def.speed = def.speed or 1
@@ -125,26 +142,17 @@ function set_sprinting(name, sprinting)
 		def.gravity = def.gravity or 1
 
 		if sprinting == true then
-
-			player:set_physics_override({
-				speed = def.speed + SPRINT_SPEED,
-				jump = def.jump + SPRINT_JUMP,
-				gravity = def.gravity
-			})
-
---print ("Speed:", def.speed + SPRINT_SPEED, "Jump:", def.jump + SPRINT_JUMP, "Gravity:", def.gravity)
-
-		elseif sprinting == false then
-
-			player:set_physics_override({
-				speed = def.speed,
-				jump = def.jump,
-				gravity = def.gravity
-			})
-
---print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
-
+			def.speed = def.speed + SPRINT_SPEED
+			def.jump = def.jump + SPRINT_JUMP
 		end
+
+		player:set_physics_override({
+			speed = def.speed,
+			jump = def.jump,
+			gravity = def.gravity
+		})
+
+		--print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
 
 		return true
 	end
@@ -325,7 +333,7 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 		poison_player(2.0, -hp_change, 0, user)
 	end
 
-	minetest.sound_play("stamina_eat", {to_player = name, gain = 0.7})
+	minetest.sound_play("stamina_eat", {to_player = name, gain = 0.7, max_hear_distance = 5})
 
 	if replace_with_item then
 		if itemstack:is_empty() then
