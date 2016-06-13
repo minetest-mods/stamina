@@ -72,6 +72,19 @@ local function stamina_update(player, level)
 	stamina_save(player)
 end
 
+-- global function for mods to amend stamina level
+stamina.change = function(player, change)
+	local name = player:get_player_name()
+	if not name or not change or change == 0 then
+		return false
+	end
+	local level = stamina_players[name].level + change
+	if level < 0 then level = 0 end
+	if level > STAMINA_VISUAL_MAX then level = STAMINA_VISUAL_MAX end
+	stamina_update(player, level)
+	return true
+end
+
 local function exhaust_player(player, v)
 	if not player or not player:is_player() then
 		return
