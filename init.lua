@@ -254,7 +254,8 @@ local function stamina_globaltimer(dtime)
 				-- don't heal if drowning or dead
 				-- TODO: don't heal if poisoned?
 				local h = tonumber(tab.level)
-				if h >= STAMINA_HEAL_LVL and h >= hp and hp > 0 and air > 0 then
+				if h >= STAMINA_HEAL_LVL and h >= hp and hp > 0 and air > 0
+				and tab.poison == false then
 					player:set_hp(hp + STAMINA_HEAL)
 					stamina_update(player, h - 1)
 				end
@@ -271,11 +272,13 @@ local function stamina_globaltimer(dtime)
 end
 
 local function poison_player(ticks, time, elapsed, user)
+	local name = user:get_player_name()
 	if elapsed <= ticks then
 		minetest.after(time, poison_player, ticks, time, elapsed + 1, user)
+		stamina_players[name].poison = true
 	else
-		local name = user:get_player_name()
 		user:hud_change(stamina_players[name].hud_id, "text", "stamina_hud_fg.png")
+		stamina_players[name].poison = false
 	end
 	local hp = user:get_hp() -1 or 0
 	if hp > 0 then
@@ -357,6 +360,7 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 		stamina_players[name] = {}
 		stamina_players[name].level = stamina_read(player)
 		stamina_players[name].exhaust = 0
+		stamina_players[name].poison = false
 		local level = math.min(stamina_players[name].level, STAMINA_VISUAL_MAX)
 		local id = player:hud_add({
 			name = "stamina",
