@@ -343,6 +343,9 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 
 	minetest.sound_play("stamina_eat", {to_player = name, gain = 0.7})
 
+
+	itemstack:take_item()
+
 	if replace_with_item then
 		if itemstack:is_empty() then
 			itemstack:add_item(replace_with_item)
@@ -356,8 +359,6 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 				core.add_item(pos, replace_with_item)
 			end
 		end
-	else
-		itemstack:take_item()
 	end
 
 	return itemstack
