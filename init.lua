@@ -43,15 +43,9 @@ local function stamina_update(player, level)
 		return
 	end
 	
-	local name = player:get_player_name()
-	if not name then
-		return false
-	end
-	local hud_id = stamina_players[name].hud_id
-	
 	player:set_attribute("stamina:level", level)
 
-	player:hud_change(hud_id, "number", math.min(STAMINA_VISUAL_MAX, level))
+	player:hud_change(player:get_attribute("stamina:hud_id"), "number", math.min(STAMINA_VISUAL_MAX, level))
 end
 
 -- global function for mods to amend stamina level
@@ -268,7 +262,7 @@ local function poison_player(ticks, time, elapsed, user)
 		minetest.after(time, poison_player, ticks, time, elapsed + 1, user)
 		stamina_players[name].poison = true
 	else
-		user:hud_change(stamina_players[name].hud_id, "text", "stamina_hud_fg.png")
+		user:hud_change(user:get_attribute("stamina:hud_id"), "text", "stamina_hud_fg.png")
 		stamina_players[name].poison = false
 	end
 	local hp = user:get_hp() -1 or 0
@@ -300,11 +294,6 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 		return itemstack
 	end
 
-	local name = user:get_player_name()
-	if not stamina_players[name] then
-		return itemstack
-	end
-
 	local level = stamina_get_level(user) or 0
 	if level >= STAMINA_VISUAL_MAX then
 		return itemstack
@@ -315,11 +304,11 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 		stamina_update(user, level)
 	else
 		-- assume hp_change < 0.
-		user:hud_change(stamina_players[name].hud_id, "text", "stamina_hud_poison.png")
+		user:hud_change(user:get_attribute("stamina:hud_id"), "text", "stamina_hud_poison.png")
 		poison_player(2.0, -hp_change, 0, user)
 	end
 
-	minetest.sound_play("stamina_eat", {to_player = name, gain = 0.7})
+	minetest.sound_play("stamina_eat", {to_player = user:get_player_name(), gain = 0.7})
 
 
 	itemstack:take_item()
@@ -369,7 +358,7 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 			offset = {x = -266, y = -110},
 			max = 0,
 		})
-		stamina_players[name].hud_id = id
+		player:set_attribute("stamina:hud_id", id)
 	end)
 
 	minetest.register_globalstep(stamina_globaltimer)
