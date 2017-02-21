@@ -27,49 +27,31 @@ SPRINT_SPEED = 0.8 		-- how much faster player can run if satiated
 SPRINT_JUMP = 0.1 		-- how much higher player can jump if satiated
 SPRINT_DRAIN = 0.35 		-- how fast to drain satation while sprinting (0-1)
 
-local function stamina_read(player)
-	local inv = player:get_inventory()
-	if not inv then
+local function stamina_get_level(player)
+	local level = player:get_attribute("stamina:level")
+	if level then
+		return tonumber( level )
+	else
 		return nil
 	end
-
-	-- itemstack storage is offest by 1 to make the math work
-	local v = inv:get_stack("stamina", 1):get_count()
-	if v == 0 then
-		v = 21
-		inv:set_stack("stamina", 1, ItemStack({name = ":", count = v}))
-	end
-
-	return v - 1
-end
-
-local function stamina_save(player)
-	local inv = player:get_inventory()
-	if not inv then
-		return nil
-	end
-	local name = player:get_player_name()
-	local level = stamina_players[name].level
-
-	level = math.max(level, 0)
-
-	inv:set_stack("stamina", 1, ItemStack({name = ":", count = level + 1}))
-	return true
 end
 
 local function stamina_update(player, level)
+	local old = stamina_get_level(player)
+	
+	if level == old then  -- To suppress HUD update
+		return
+	end
+	
 	local name = player:get_player_name()
 	if not name then
 		return false
 	end
-	local old = stamina_players[name].level
-	if level == old then
-		return
-	end
-	stamina_players[name].level = level
+	local hud_id = stamina_players[name].hud_id
+	
+	player:set_attribute("stamina:level", level)
 
-	player:hud_change(stamina_players[name].hud_id, "number", math.min(STAMINA_VISUAL_MAX, level))
-	stamina_save(player)
+	player:hud_change(hud_id, "number", math.min(STAMINA_VISUAL_MAX, level))
 end
 
 -- global function for mods to amend stamina level
@@ -78,7 +60,7 @@ stamina.change = function(player, change)
 	if not name or not change or change == 0 then
 		return false
 	end
-	local level = stamina_players[name].level + change
+	local level = stamina_get_level(player) + change
 	if level < 0 then level = 0 end
 	if level > STAMINA_VISUAL_MAX then level = STAMINA_VISUAL_MAX end
 	stamina_update(player, level)
@@ -109,7 +91,7 @@ local function exhaust_player(player, v)
 
 	if e > STAMINA_EXHAUST_LVL then
 		e = 0
-		local h = tonumber(stamina_players[name].level)
+		local h = stamina_get_level(player)
 		if h > 0 then
 			stamina_update(player, h - 1)
 		end
@@ -193,7 +175,7 @@ local function stamina_globaltimer(dtime)
 				-- check if player can sprint (stamina must be over 6 points)
 				if controls.aux1 and controls.up
 				and not minetest.check_player_privs(player, {fast = true})
-				and stamina_players[name].level > 6 then
+				and stamina_get_level(player) > 6 then
 
 					set_sprinting(name, true)
 
@@ -228,7 +210,7 @@ local function stamina_globaltimer(dtime)
 					end
 
 					-- Lower the player's stamina when sprinting
-					local level = tonumber(stamina_players[name].level)
+					local level = stamina_get_level(player)
 					stamina_update(player, level - (SPRINT_DRAIN * STAMINA_MOVE_TICK))
 				else
 					set_sprinting(name, false)
@@ -243,13 +225,9 @@ local function stamina_globaltimer(dtime)
 	-- lower saturation by 1 point after STAMINA_TICK second(s)
 	if stamina_timer > STAMINA_TICK then
 		for _,player in ipairs(minetest.get_connected_players()) do
-			local name = player:get_player_name()
-			local tab = stamina_players[name]
-			if tab then
-				local h = tab.level
-				if h > STAMINA_TICK_MIN then
-					stamina_update(player, h - 1)
-				end
+			local h = stamina_get_level(player)
+			if h > STAMINA_TICK_MIN then
+				stamina_update(player, h - 1)
 			end
 		end
 		stamina_timer = 0
@@ -266,7 +244,7 @@ local function stamina_globaltimer(dtime)
 
 				-- don't heal if drowning or dead
 				-- TODO: don't heal if poisoned?
-				local h = tonumber(tab.level)
+				local h = stamina_get_level(player)
 				if h >= STAMINA_HEAL_LVL and h >= hp and hp > 0 and air > 0
 				and tab.poison == false then
 					player:set_hp(hp + STAMINA_HEAL)
@@ -274,7 +252,7 @@ local function stamina_globaltimer(dtime)
 				end
 
 				-- or damage player by 1 hp if saturation is < 2 (of 30)
-				if tonumber(tab.level) < STAMINA_STARVE_LVL then
+				if stamina_get_level(player) < STAMINA_STARVE_LVL then
 					player:set_hp(hp - STAMINA_STARVE)
 				end
 			end
@@ -327,7 +305,7 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 		return itemstack
 	end
 
-	local level = tonumber(stamina_players[name].level or 0)
+	local level = stamina_get_level(user) or 0
 	if level >= STAMINA_VISUAL_MAX then
 		return itemstack
 	end
@@ -372,10 +350,14 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 
 		local name = player:get_player_name()
 		stamina_players[name] = {}
-		stamina_players[name].level = stamina_read(player)
 		stamina_players[name].exhaust = 0
 		stamina_players[name].poison = false
-		local level = math.min(stamina_players[name].level, STAMINA_VISUAL_MAX)
+		local level = STAMINA_VISUAL_MAX -- TODO
+		if stamina_get_level(player) then
+			level = math.min(stamina_get_level(player), STAMINA_VISUAL_MAX)
+		else
+			player:set_attribute("stamina:level", level)
+		end
 		local id = player:hud_add({
 			name = "stamina",
 			hud_elem_type = "statbar",
