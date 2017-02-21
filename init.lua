@@ -27,13 +27,17 @@ SPRINT_SPEED = 0.8 		-- how much faster player can run if satiated
 SPRINT_JUMP = 0.1 		-- how much higher player can jump if satiated
 SPRINT_DRAIN = 0.35 		-- how fast to drain satation while sprinting (0-1)
 
-local function stamina_get_level(player)
-	local level = player:get_attribute("stamina:level")
+local function get_int_attribute(player, key)
+	local level = player:get_attribute(key)
 	if level then
 		return tonumber( level )
 	else
 		return nil
 	end
+end
+
+local function stamina_get_level(player)
+	return get_int_attribute(player, "stamina:level")
 end
 
 local function stamina_update_level(player, level)
@@ -60,6 +64,10 @@ local function stamina_set_poisoned(player, poisoned)
 	end
 end
 
+local function stamina_get_exhaustion(player)
+	return get_int_attribute(player, "stamina:exhaustion")
+end
+
 -- global function for mods to amend stamina level
 stamina.change = function(player, change)
 	local name = player:get_player_name()
@@ -83,27 +91,19 @@ local function exhaust_player(player, v)
 		return
 	end
 
-	local s = stamina_players[name]
-	if not s then
-		return
-	end
+	local exhaustion = stamina_get_exhaustion( player ) or 0
 
-	local e = s.exhaust
-	if not e then
-		s.exhaust = 0
-	end
+	exhaustion = exhaustion + v
 
-	e = e + v
-
-	if e > STAMINA_EXHAUST_LVL then
-		e = 0
+	if exhaustion > STAMINA_EXHAUST_LVL then
+		exhaustion = 0
 		local h = stamina_get_level(player)
 		if h > 0 then
 			stamina_update_level(player, h - 1)
 		end
 	end
 
-	s.exhaust = e
+	player:set_attribute("stamina:exhaustion", exhaustion)
 end
 
 -- Sprint settings and function
@@ -112,45 +112,37 @@ local enable_sprint_particles = minetest.setting_getbool("sprint_particles") ~= 
 local armor_mod = minetest.get_modpath("3d_armor")
 
 function set_sprinting(name, sprinting)
+	local player = minetest.get_player_by_name(name)
+	local def = {}
+	if armor_mod and armor and armor.def then
+		def = armor.def[name] -- get player physics from armor
+	end
 
-	if stamina_players[name] then
+	def.speed = def.speed or 1
+	def.jump = def.jump or 1
+	def.gravity = def.gravity or 1
 
-		local player = minetest.get_player_by_name(name)
-		local def = {}
-		if armor_mod and armor and armor.def then
-			def = armor.def[name] -- get player physics from armor
-		end
+	if sprinting == true then
 
-		def.speed = def.speed or 1
-		def.jump = def.jump or 1
-		def.gravity = def.gravity or 1
-
-		if sprinting == true then
-
-			player:set_physics_override({
-				speed = def.speed + SPRINT_SPEED,
-				jump = def.jump + SPRINT_JUMP,
-				gravity = def.gravity
-			})
+		player:set_physics_override({
+			speed = def.speed + SPRINT_SPEED,
+			jump = def.jump + SPRINT_JUMP,
+			gravity = def.gravity
+		})
 
 --print ("Speed:", def.speed + SPRINT_SPEED, "Jump:", def.jump + SPRINT_JUMP, "Gravity:", def.gravity)
 
-		elseif sprinting == false then
+	elseif sprinting == false then
 
-			player:set_physics_override({
-				speed = def.speed,
-				jump = def.jump,
-				gravity = def.gravity
-			})
+		player:set_physics_override({
+			speed = def.speed,
+			jump = def.jump,
+			gravity = def.gravity
+		})
 
 --print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
 
-		end
-
-		return true
 	end
-
-	return false
 end
 
 -- Time based stamina functions
@@ -343,8 +335,6 @@ end
 if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.setting_get("enable_stamina") or "1") then
 	minetest.register_on_joinplayer(function(player)
 		local name = player:get_player_name()
-		stamina_players[name] = {}
-		stamina_players[name].exhaust = 0
 		local level = STAMINA_VISUAL_MAX -- TODO
 		if stamina_get_level(player) then
 			level = math.min(stamina_get_level(player), STAMINA_VISUAL_MAX)
