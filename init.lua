@@ -36,6 +36,18 @@ local function stamina_get_level(player)
 	end
 end
 
+local function stamina_update_level(player, level)
+	local old = stamina_get_level(player)
+	
+	if level == old then  -- To suppress HUD update
+		return
+	end
+	
+	player:set_attribute("stamina:level", level)
+	
+	player:hud_change(player:get_attribute("stamina:hud_id"), "number", math.min(STAMINA_VISUAL_MAX, level))
+end
+
 local function stamina_is_poisoned(player)
 	return player:get_attribute("stamina:poisoned") == "yes"
 end
@@ -48,18 +60,6 @@ local function stamina_set_poisoned(player, poisoned)
 	end
 end
 
-local function stamina_update(player, level)
-	local old = stamina_get_level(player)
-	
-	if level == old then  -- To suppress HUD update
-		return
-	end
-	
-	player:set_attribute("stamina:level", level)
-
-	player:hud_change(player:get_attribute("stamina:hud_id"), "number", math.min(STAMINA_VISUAL_MAX, level))
-end
-
 -- global function for mods to amend stamina level
 stamina.change = function(player, change)
 	local name = player:get_player_name()
@@ -69,7 +69,7 @@ stamina.change = function(player, change)
 	local level = stamina_get_level(player) + change
 	if level < 0 then level = 0 end
 	if level > STAMINA_VISUAL_MAX then level = STAMINA_VISUAL_MAX end
-	stamina_update(player, level)
+	stamina_update_level(player, level)
 	return true
 end
 
@@ -99,7 +99,7 @@ local function exhaust_player(player, v)
 		e = 0
 		local h = stamina_get_level(player)
 		if h > 0 then
-			stamina_update(player, h - 1)
+			stamina_update_level(player, h - 1)
 		end
 	end
 
@@ -217,7 +217,7 @@ local function stamina_globaltimer(dtime)
 
 					-- Lower the player's stamina when sprinting
 					local level = stamina_get_level(player)
-					stamina_update(player, level - (SPRINT_DRAIN * STAMINA_MOVE_TICK))
+					stamina_update_level(player, level - (SPRINT_DRAIN * STAMINA_MOVE_TICK))
 				else
 					set_sprinting(name, false)
 				end
@@ -233,7 +233,7 @@ local function stamina_globaltimer(dtime)
 		for _,player in ipairs(minetest.get_connected_players()) do
 			local h = stamina_get_level(player)
 			if h > STAMINA_TICK_MIN then
-				stamina_update(player, h - 1)
+				stamina_update_level(player, h - 1)
 			end
 		end
 		stamina_timer = 0
@@ -252,7 +252,7 @@ local function stamina_globaltimer(dtime)
 			if h >= STAMINA_HEAL_LVL and h >= hp and hp > 0 and air > 0
 					and not stamina_is_poisoned(player) then
 				player:set_hp(hp + STAMINA_HEAL)
-				stamina_update(player, h - 1)
+				stamina_update_level(player, h - 1)
 			end
 
 			-- or damage player by 1 hp if saturation is < 2 (of 30)
@@ -309,7 +309,7 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 
 	if hp_change > 0 then
 		level = level + hp_change
-		stamina_update(user, level)
+		stamina_update_level(user, level)
 	else
 		-- assume hp_change < 0.
 		user:hud_change(user:get_attribute("stamina:hud_id"), "text", "stamina_hud_poison.png")
@@ -381,6 +381,6 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 	end)
 
 	minetest.register_on_respawnplayer(function(player)
-		stamina_update(player, STAMINA_VISUAL_MAX)
+		stamina_update_level(player, STAMINA_VISUAL_MAX)
 	end)
 end
