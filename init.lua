@@ -36,6 +36,18 @@ local function stamina_get_level(player)
 	end
 end
 
+local function stamina_is_poisoned(player)
+	return player:get_attribute("stamina:poisoned") == "yes"
+end
+
+local function stamina_set_poisoned(player, poisoned)
+	if poisoned then
+		player:set_attribute("stamina:poisoned", "yes")
+	else
+		player:set_attribute("stamina:poisoned", "no")
+	end
+end
+
 local function stamina_update(player, level)
 	local old = stamina_get_level(player)
 	
@@ -231,24 +243,21 @@ local function stamina_globaltimer(dtime)
 	if health_timer > STAMINA_HEALTH_TICK then
 		for _,player in ipairs(minetest.get_connected_players()) do
 			local name = player:get_player_name()
-			local tab = stamina_players[name]
-			if tab then
-				local air = player:get_breath() or 0
-				local hp = player:get_hp()
+			local air = player:get_breath() or 0
+			local hp = player:get_hp()
 
-				-- don't heal if drowning or dead
-				-- TODO: don't heal if poisoned?
-				local h = stamina_get_level(player)
-				if h >= STAMINA_HEAL_LVL and h >= hp and hp > 0 and air > 0
-				and tab.poison == false then
-					player:set_hp(hp + STAMINA_HEAL)
-					stamina_update(player, h - 1)
-				end
+			-- don't heal if drowning or dead
+			-- TODO: don't heal if poisoned?
+			local h = stamina_get_level(player)
+			if h >= STAMINA_HEAL_LVL and h >= hp and hp > 0 and air > 0
+					and not stamina_is_poisoned(player) then
+				player:set_hp(hp + STAMINA_HEAL)
+				stamina_update(player, h - 1)
+			end
 
-				-- or damage player by 1 hp if saturation is < 2 (of 30)
-				if stamina_get_level(player) < STAMINA_STARVE_LVL then
-					player:set_hp(hp - STAMINA_STARVE)
-				end
+			-- or damage player by 1 hp if saturation is < 2 (of 30)
+			if stamina_get_level(player) < STAMINA_STARVE_LVL then
+				player:set_hp(hp - STAMINA_STARVE)
 			end
 		end
 
@@ -257,13 +266,12 @@ local function stamina_globaltimer(dtime)
 end
 
 local function poison_player(ticks, time, elapsed, user)
-	local name = user:get_player_name()
 	if elapsed <= ticks then
 		minetest.after(time, poison_player, ticks, time, elapsed + 1, user)
-		stamina_players[name].poison = true
+		stamina_set_poisoned(user,true)
 	else
 		user:hud_change(user:get_attribute("stamina:hud_id"), "text", "stamina_hud_fg.png")
-		stamina_players[name].poison = false
+		stamina_set_poisoned(user,false)
 	end
 	local hp = user:get_hp() -1 or 0
 	if hp > 0 then
@@ -337,7 +345,6 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 		local name = player:get_player_name()
 		stamina_players[name] = {}
 		stamina_players[name].exhaust = 0
-		stamina_players[name].poison = false
 		local level = STAMINA_VISUAL_MAX -- TODO
 		if stamina_get_level(player) then
 			level = math.min(stamina_get_level(player), STAMINA_VISUAL_MAX)
