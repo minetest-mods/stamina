@@ -129,8 +129,12 @@ function set_sprinting(name, sprinting)
 
 		local player = minetest.get_player_by_name(name)
 		local def = {}
+
 		if armor_mod and armor and armor.def then
-			def = armor.def[name] -- get player physics from armor
+			-- get player physics from armor
+			def.speed = armor.def[name].speed
+			def.jump = armor.def[name].jump
+			def.gravity = armor.def[name].gravity
 		end
 
 		def.speed = def.speed or 1
@@ -138,26 +142,17 @@ function set_sprinting(name, sprinting)
 		def.gravity = def.gravity or 1
 
 		if sprinting == true then
-
-			player:set_physics_override({
-				speed = def.speed + SPRINT_SPEED,
-				jump = def.jump + SPRINT_JUMP,
-				gravity = def.gravity
-			})
-
---print ("Speed:", def.speed + SPRINT_SPEED, "Jump:", def.jump + SPRINT_JUMP, "Gravity:", def.gravity)
-
-		elseif sprinting == false then
-
-			player:set_physics_override({
-				speed = def.speed,
-				jump = def.jump,
-				gravity = def.gravity
-			})
-
---print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
-
+			def.speed = def.speed + SPRINT_SPEED
+			def.jump = def.jump + SPRINT_JUMP
 		end
+
+		player:set_physics_override({
+			speed = def.speed,
+			jump = def.jump,
+			gravity = def.gravity
+		})
+
+		--print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
 
 		return true
 	end
@@ -341,7 +336,7 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 		poison_player(2.0, -hp_change, 0, user)
 	end
 
-	minetest.sound_play("stamina_eat", {to_player = name, gain = 0.7})
+	minetest.sound_play("stamina_eat", {to_player = name, gain = 0.7, max_hear_distance = 5})
 
 
 	itemstack:take_item()
