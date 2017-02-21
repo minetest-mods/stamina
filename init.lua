@@ -334,9 +334,6 @@ end
 -- stamina is disabled if damage is disabled
 if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.setting_get("enable_stamina") or "1") then
 	minetest.register_on_joinplayer(function(player)
-		local inv = player:get_inventory()
-		inv:set_size("stamina", 1)
-
 		local name = player:get_player_name()
 		stamina_players[name] = {}
 		stamina_players[name].exhaust = 0
