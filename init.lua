@@ -358,19 +358,29 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 	minetest.register_globalstep(stamina_globaltimer)
 
 	minetest.register_on_placenode(function(pos, oldnode, player, ext)
-		exhaust_player(player, STAMINA_EXHAUST_PLACE)
+		if not player.is_fake_player then
+			exhaust_player(player, STAMINA_EXHAUST_PLACE)
+		end
 	end)
 	minetest.register_on_dignode(function(pos, oldnode, player, ext)
-		exhaust_player(player, STAMINA_EXHAUST_DIG)
+		if not player.is_fake_player then
+			exhaust_player(player, STAMINA_EXHAUST_DIG)
+		end
 	end)
 	minetest.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
-		exhaust_player(player, STAMINA_EXHAUST_CRAFT)
+		if not player.is_fake_player then
+			exhaust_player(player, STAMINA_EXHAUST_CRAFT)
+		end
 	end)
 	minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
-		exhaust_player(hitter, STAMINA_EXHAUST_PUNCH)
+		if not player.is_fake_player then
+			exhaust_player(hitter, STAMINA_EXHAUST_PUNCH)
+		end
 	end)
 
 	minetest.register_on_respawnplayer(function(player)
-		stamina_update_level(player, STAMINA_VISUAL_MAX)
+		if not player.is_fake_player then
+			stamina_update_level(player, STAMINA_VISUAL_MAX)
+		end
 	end)
 end
