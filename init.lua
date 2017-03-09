@@ -82,7 +82,7 @@ stamina.change = function(player, change)
 end
 
 local function exhaust_player(player, v)
-	if not player or not player:is_player() then
+	if not player or not player:is_player() or player.is_fake_player then
 		return
 	end
 
