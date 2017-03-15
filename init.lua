@@ -1,8 +1,6 @@
 
 stamina = {}
 
-local stamina_players = {}
-
 STAMINA_TICK = 800		-- time in seconds after that 1 stamina point is taken
 STAMINA_TICK_MIN = 4		-- stamina ticks won't reduce stamina below this level
 STAMINA_HEALTH_TICK = 4		-- time in seconds after player gets healed/damaged
@@ -230,7 +228,6 @@ local function stamina_globaltimer(dtime)
 	-- heal or damage player, depending on saturation
 	if health_timer > STAMINA_HEALTH_TICK then
 		for _,player in ipairs(minetest.get_connected_players()) do
-			local name = player:get_player_name()
 			local air = player:get_breath() or 0
 			local hp = player:get_hp()
 
@@ -330,7 +327,6 @@ end
 -- stamina is disabled if damage is disabled
 if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.setting_get("enable_stamina") or "1") then
 	minetest.register_on_joinplayer(function(player)
-		local name = player:get_player_name()
 		local level = STAMINA_VISUAL_MAX -- TODO
 		if get_int_attribute(player, "stamina:level") then
 			level = math.min(get_int_attribute(player, "stamina:level"), STAMINA_VISUAL_MAX)
