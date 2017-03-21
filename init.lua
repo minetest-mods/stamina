@@ -300,6 +300,29 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 
 	minetest.sound_play("stamina_eat", {to_player = user:get_player_name(), gain = 0.7})
 
+	-- particle effect when eating
+	local pos = user:getpos()
+	pos.y = pos.y + 1.5 -- mouth level
+	local vel = user:get_player_velocity()
+	local itemname = itemstack:get_name()
+	local texture  = minetest.registered_items[itemname].inventory_image
+	local dir = user:get_look_dir()
+
+	minetest.add_particlespawner({
+		amount = 5,
+		time = 0.1,
+		minpos = pos,
+		maxpos = pos,
+		minvel = {x = dir.x - 1, y = dir.y, z = dir.z - 1},
+		maxvel = {x = dir.x + 1, y = dir.y, z = dir.z + 1},
+		minacc = {x = 0, y = -5, z = 0},
+		maxacc = {x = 0, y = -9, z = 0},
+		minexptime = 1,
+		maxexptime = 1,
+		minsize = 1,
+		maxsize = 2,
+		texture = texture,
+	})
 
 	itemstack:take_item()
 
@@ -311,8 +334,7 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 			if inv:room_for_item("main", {name=replace_with_item}) then
 				inv:add_item("main", replace_with_item)
 			else
-				local pos = user:getpos()
-				pos.y = math.floor(pos.y + 0.5)
+				pos.y = math.floor(pos.y - 1.0)
 				core.add_item(pos, replace_with_item)
 			end
 		end
