@@ -108,8 +108,11 @@ local armor_mod = minetest.get_modpath("3d_armor")
 function set_sprinting(name, sprinting)
 	local player = minetest.get_player_by_name(name)
 	local def = {}
+	-- Get player physics from 3d_armor mod
 	if armor_mod and armor and armor.def then
-		def = armor.def[name] -- get player physics from armor
+		def.speed = armor.def[name].speed
+		def.jump = armor.def[name].jump
+		def.gravity = armor.def[name].gravity
 	end
 
 	def.speed = def.speed or 1
@@ -118,21 +121,15 @@ function set_sprinting(name, sprinting)
 
 	if sprinting == true then
 
-		player:set_physics_override({
-			speed = def.speed + SPRINT_SPEED,
-			jump = def.jump + SPRINT_JUMP,
-			gravity = def.gravity
-		})
+		def.speed = def.speed + SPRINT_SPEED
+		def.jump = def.jump + SPRINT_JUMP
+	end
 
---print ("Speed:", def.speed + SPRINT_SPEED, "Jump:", def.jump + SPRINT_JUMP, "Gravity:", def.gravity)
-
-	elseif sprinting == false then
-
-		player:set_physics_override({
-			speed = def.speed,
-			jump = def.jump,
-			gravity = def.gravity
-		})
+	player:set_physics_override({
+		speed = def.speed,
+		jump = def.jump,
+		gravity = def.gravity
+	})
 
 --print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
 
