@@ -130,10 +130,6 @@ function set_sprinting(name, sprinting)
 		jump = def.jump,
 		gravity = def.gravity
 	})
-
---print ("Speed:", def.speed, "Jump:", def.jump, "Gravity:", def.gravity)
-
-	end
 end
 
 -- Time based stamina functions
@@ -303,7 +299,6 @@ function stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thin
 	-- particle effect when eating
 	local pos = user:getpos()
 	pos.y = pos.y + 1.5 -- mouth level
-	local vel = user:get_player_velocity()
 	local itemname = itemstack:get_name()
 	local texture  = minetest.registered_items[itemname].inventory_image
 	local dir = user:get_look_dir()
