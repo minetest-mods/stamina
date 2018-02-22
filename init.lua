@@ -359,6 +359,8 @@ if minetest.setting_getbool("enable_damage") and minetest.is_yes(minetest.settin
 			max = 0,
 		})
 		player:set_attribute("stamina:hud_id", id)
+		-- reset poisoned
+		player:set_attribute("stamina:poisoned", "no")
 	end)
 
 	minetest.register_globalstep(stamina_globaltimer)
