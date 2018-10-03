@@ -1,4 +1,3 @@
-
 stamina = {}
 
 STAMINA_TICK = 800		-- time in seconds after that 1 stamina point is taken
@@ -103,33 +102,43 @@ end
 -- Sprint settings and function
 local enable_sprint = minetest.setting_getbool("sprint") ~= false
 local enable_sprint_particles = minetest.setting_getbool("sprint_particles") ~= false
+local player_monoids_mod = minetest.get_modpath("player_monoids")
 local armor_mod = minetest.get_modpath("3d_armor")
 
 function set_sprinting(name, sprinting)
 	local player = minetest.get_player_by_name(name)
 	local def = {}
-	-- Get player physics from 3d_armor mod
-	if armor_mod and armor and armor.def then
-		def.speed = armor.def[name].speed
-		def.jump = armor.def[name].jump
-		def.gravity = armor.def[name].gravity
+	if player_monoids_mod and player_monoids then
+		if sprinting == true then
+			player_monoids.speed:add_change(player, 1 + SPRINT_SPEED, "stamina:physics")
+			player_monoids.jump:add_change(player, 1 + SPRINT_JUMP, "stamina:physics")
+		else
+			player_monoids.speed:del_change(player, "stamina:physics")
+			player_monoids.jump:del_change(player, "stamina:physics")
+		end
+	else
+		-- Get player physics from 3d_armor mod
+		if armor_mod and armor and armor.def then
+			def.speed = armor.def[name].speed
+			def.jump = armor.def[name].jump
+			def.gravity = armor.def[name].gravity
+		end
+
+		def.speed = def.speed or 1
+		def.jump = def.jump or 1
+		def.gravity = def.gravity or 1
+
+		if sprinting == true then
+			def.speed = def.speed + SPRINT_SPEED
+			def.jump = def.jump + SPRINT_JUMP
+		end
+
+		player:set_physics_override({
+			speed = def.speed,
+			jump = def.jump,
+			gravity = def.gravity
+		})
 	end
-
-	def.speed = def.speed or 1
-	def.jump = def.jump or 1
-	def.gravity = def.gravity or 1
-
-	if sprinting == true then
-
-		def.speed = def.speed + SPRINT_SPEED
-		def.jump = def.jump + SPRINT_JUMP
-	end
-
-	player:set_physics_override({
-		speed = def.speed,
-		jump = def.jump,
-		gravity = def.gravity
-	})
 end
 
 -- Time based stamina functions
