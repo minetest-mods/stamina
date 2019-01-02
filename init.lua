@@ -259,6 +259,11 @@ end
 
 -- override core.do_item_eat() so we can redirect hp_change to stamina
 core.do_item_eat = function(hp_change, replace_with_item, itemstack, user, pointed_thing)
+	if user.is_fake_player then
+		-- abort if called by fake player (eg. pipeworks-wielder)
+		return
+	end
+
 	local old_itemstack = itemstack
 	itemstack = stamina.eat(hp_change, replace_with_item, itemstack, user, pointed_thing)
 	for _, callback in pairs(core.registered_on_item_eats) do
