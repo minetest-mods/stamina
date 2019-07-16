@@ -41,6 +41,11 @@ local function stamina_update_level(player, level)
 		return
 	end
 
+	-- players without interact priv cannot eat
+	if minetest.check_player_privs(player, {interact=false}) then
+		return
+	end
+
 	player:set_attribute("stamina:level", level)
 
 	player:hud_change(player:get_attribute("stamina:hud_id"), "number", math.min(STAMINA_VISUAL_MAX, level))
