@@ -239,7 +239,7 @@ local function stamina_globaltimer(dtime)
 			end
 
 			-- or damage player by 1 hp if saturation is < 2 (of 30)
-			if get_int_attribute(player, "stamina:level") < STAMINA_STARVE_LVL then
+			if get_int_attribute(player, "stamina:level") < STAMINA_STARVE_LVL and hp > 0 then
 				player:set_hp(hp - STAMINA_STARVE)
 			end
 		end
