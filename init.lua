@@ -40,6 +40,7 @@ stamina.settings = {
 local settings = stamina.settings
 local enable_damage = minetest.settings:get_bool("enable_damage")
 local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
+local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
 
 local function is_player(player)
 	return player and player.is_player and player:is_player() and player.set_attribute and player.get_player_name and player:get_player_name()
@@ -203,30 +204,39 @@ function stamina.set_sprinting(player, sprinting)
 		end
 	end
 
-	local name = player:get_player_name()
-
-	local def
-	if armor_mod then
-		-- Get player physics from 3d_armor mod
-		def = {
-			speed=armor.def[name].speed,
-			jump=armor.def[name].jump,
-			gravity=armor.def[name].gravity
-		}
+	if player_monoids_mod then
+		if sprinting then
+			player_monoids.speed:add_change(player, 1 + settings.sprint_speed, "stamina:physics")
+			player_monoids.jump:add_change(player, 1 + settings.sprint_jump, "stamina:physics")
+		else
+			player_monoids.speed:del_change(player, "stamina:physics")
+			player_monoids.jump:del_change(player, "stamina:physics")
+		end
 	else
-		def = {
-			speed=1,
-			jump=1,
-			gravity=1
-		}
-	end
+		local def
+		if armor_mod then
+			-- Get player physics from 3d_armor mod
+			local name = player:get_player_name()
+			def = {
+				speed=armor.def[name].speed,
+				jump=armor.def[name].jump,
+				gravity=armor.def[name].gravity
+			}
+		else
+			def = {
+				speed=1,
+				jump=1,
+				gravity=1
+			}
+		end
 
-	if sprinting == true then
-		def.speed = def.speed + settings.sprint_speed
-		def.jump = def.jump + settings.sprint_jump
-	end
+		if sprinting then
+			def.speed = def.speed + settings.sprint_speed
+			def.jump = def.jump + settings.sprint_jump
+		end
 
-	player:set_physics_override(def)
+		player:set_physics_override(def)
+	end
 end
 
 -- Time based stamina functions
