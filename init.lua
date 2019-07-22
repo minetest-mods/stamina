@@ -53,6 +53,7 @@ local function is_player(player)
 	return (
 		player and
 		not player.is_fake_player and
+		player.get_attribute and  -- check for pipeworks fake player
 		player.is_player and
 		player:is_player()
 	)
