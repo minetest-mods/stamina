@@ -54,10 +54,7 @@ local function is_player(player)
 		player and
 		not player.is_fake_player and
 		player.is_player and
-		player:is_player() and
-		player.set_attribute and
-		player.get_player_name and
-		player:get_player_name()
+		player:is_player()
 	)
 end
 
