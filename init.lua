@@ -357,43 +357,39 @@ end
 
 -- override minetest.do_item_eat() so we can redirect hp_change to stamina
 stamina.core_item_eat = minetest.do_item_eat
-function minetest.do_item_eat(hp_change, replace_with_item, itemstack, user, pointed_thing)
+function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, pointed_thing)
 	for _, callback in ipairs(minetest.registered_on_item_eats) do
-		local result = callback(hp_change, replace_with_item, itemstack, user, pointed_thing)
+		local result = callback(hp_change, replace_with_item, itemstack, player, pointed_thing)
 		if result then
 			return result
 		end
 	end
 
-	if not itemstack then
+	if not is_player(player) or not itemstack then
 		return itemstack
 	end
 
-	if not user then
-		return itemstack
-	end
-
-	local level = stamina.get_level(user) or 0
+	local level = stamina.get_level(player) or 0
 	if level >= settings.visual_max then
 		return itemstack
 	end
 
 	if hp_change > 0 then
 		level = level + hp_change
-		stamina.update_level(user, level)
+		stamina.update_level(player, level)
 	else
 		-- assume hp_change < 0.
-		stamina.poison(user, 2.0, -hp_change)
+		stamina.poison(player, 2.0, -hp_change)
 	end
 
-	minetest.sound_play("stamina_eat", {to_player = user:get_player_name(), gain = 0.7})
+	minetest.sound_play("stamina_eat", {to_player = player:get_player_name(), gain = 0.7})
 
 	-- particle effect when eating
-	local pos = user:getpos()
+	local pos = player:getpos()
 	pos.y = pos.y + 1.5 -- mouth level
 	local itemname = itemstack:get_name()
 	local texture  = minetest.registered_items[itemname].inventory_image
-	local dir = user:get_look_dir()
+	local dir = player:get_look_dir()
 
 	minetest.add_particlespawner({
 		amount = 5,
@@ -417,7 +413,7 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, user, poi
 		if itemstack:is_empty() then
 			itemstack:add_item(replace_with_item)
 		else
-			local inv = user:get_inventory()
+			local inv = player:get_inventory()
 			if inv:room_for_item("main", {name=replace_with_item}) then
 				inv:add_item("main", replace_with_item)
 			else
@@ -433,12 +429,7 @@ end
 -- stamina is disabled if damage is disabled
 if enable_damage and settings.enabled then
 	minetest.register_on_joinplayer(function(player)
-		local level = settings.visual_max -- TODO
-		if stamina.get_level(player) then
-			level = math.min(stamina.get_level(player), settings.visual_max)
-		else
-			player:set_attribute("stamina:level", level)
-		end
+		local level = stamina.get_level(player) or settings.visual_max
 		local id = player:hud_add({
 			name = "stamina",
 			hud_elem_type = "statbar",
@@ -450,9 +441,10 @@ if enable_damage and settings.enabled then
 			offset = {x = -266, y = -110},
 			max = 0,
 		})
+		stamina.set_level(player, level)
 		player:set_attribute("stamina:hud_id", id)
 		-- reset poisoned
-		player:set_attribute("stamina:poisoned", "no")
+		stamina.set_poisoned(player, false)
 	end)
 
 	minetest.register_globalstep(stamina_globaltimer)
