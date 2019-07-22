@@ -1,5 +1,8 @@
 stamina = {}
 local modname = minetest.get_current_modname()
+local enable_damage = minetest.settings:get_bool("enable_damage")
+local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
+local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
 
 function stamina.log(level, message, ...)
 	return minetest.log(level, ('[%s] %s'):format(modname, message:format(...)))
@@ -14,9 +17,9 @@ local function get_setting(key, default)
 end
 
 stamina.settings = {
-	enabled = minetest.settings:get_bool('stamina.enabled', true),
 	sprint = minetest.settings:get_bool('stamina.sprint', true),
 	sprint_particles = minetest.settings:get_bool('stamina.sprint_particles', true),
+	sprint_lvl = get_setting('sprint_lvl', 6), -- minimum saturation to be able to sprint
 	tick = get_setting('tick', 800), -- time in seconds after that 1 saturation point is taken
 	tick_min = get_setting('tick_min', 4), -- stamina ticks won't reduce saturation below this level
 	health_tick = get_setting('health_tick', 4), -- time in seconds after player gets healed/damaged
@@ -27,6 +30,7 @@ stamina.settings = {
 	exhaust_jump = get_setting('exhaust_jump', 5), -- exhaustion for jumping
 	exhaust_craft = get_setting('exhaust_craft', 20), -- exhaustion for crafting
 	exhaust_punch = get_setting('exhaust_punch', 40), -- exhaustion for punching
+	exhaust_sprint = get_setting('exhaust_sprint', 28), -- exhaustion for running
 	exhaust_lvl = get_setting('exhaust_lvl', 160), -- exhaustion level at which saturation gets lowered
 	heal = get_setting('heal', 1), -- amount of HP a player gains per stamina.health_tick
 	heal_lvl = get_setting('heal_lvl', 5), -- minimum saturation needed for healing
@@ -35,12 +39,15 @@ stamina.settings = {
 	visual_max = get_setting('visual_max', 20), -- hud bar only extends to 20
 	sprint_speed = get_setting('sprint_speed', 0.8), -- how much faster a player can run if satiated
 	sprint_jump = get_setting('sprint_jump', 0.1), -- how much faster a player can jump if satiated
-	sprint_drain = get_setting('sprint_drain', 0.35), -- how fast to drain saturation while sprinting
 }
 local settings = stamina.settings
-local enable_damage = minetest.settings:get_bool("enable_damage")
-local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
-local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
+
+local attribute = {
+	saturation = "stamina:level",
+	hud_id = "stamina:hud_id",
+	poisoned = "stamina:poisoned",
+	exhaustion = "stamina:exhaustion",
+}
 
 local function is_player(player)
 	return (
@@ -62,34 +69,34 @@ local function get_int_attribute(player, key)
 		return nil
 	end
 end
-
-function stamina.get_level(player)
-	return get_int_attribute(player, "stamina:level")
+--- SATURATION API ---
+function stamina.get_saturation(player)
+	return get_int_attribute(player, attribute.saturation)
 end
 
-function stamina.set_level(player, level)
-	player:set_attribute("stamina:level", level)
+function stamina.set_saturation(player, level)
+	player:set_attribute(attribute.saturation, level)
 	player:hud_change(
-		player:get_attribute("stamina:hud_id"),
+		player:get_attribute(attribute.hud_id),
 		"number",
 		math.min(settings.visual_max, level)
 	)
 end
 
-stamina.registered_on_update_levels = {}
-function stamina.register_on_update_level(fun)
-	table.insert(stamina.registered_on_update_levels, fun)
+stamina.registered_on_update_saturations = {}
+function stamina.register_on_update_saturation(fun)
+	table.insert(stamina.registered_on_update_saturations, fun)
 end
 
-function stamina.update_level(player, level)
-	for _, callback in ipairs(stamina.registered_on_update_levels) do
+function stamina.update_saturation(player, level)
+	for _, callback in ipairs(stamina.registered_on_update_saturations) do
 		local result = callback(player, level)
 		if result then
 			return result
 		end
 	end
 
-	local old = stamina.get_level(player)
+	local old = stamina.get_saturation(player)
 
 	if level == old then  -- To suppress HUD update
 		return
@@ -100,31 +107,34 @@ function stamina.update_level(player, level)
 		return
 	end
 
-	stamina.set_level(player, level)
+	stamina.set_saturation(player, level)
 end
 
-function stamina.change(player, change)
+function stamina.change_saturation(player, change)
 	if not is_player(player) or not change or change == 0 then
 		return false
 	end
-	local level = stamina.get_level(player) + change
+	local level = stamina.get_saturation(player) + change
 	level = math.max(level, 0)
 	level = math.min(level, settings.visual_max)
-	stamina.update_level(player, level)
+	stamina.update_saturation(player, level)
 	return true
 end
 
+stamina.change = stamina.change_saturation -- for backwards compatablity
+--- END SATURATION API ---
+--- POISON API ---
 function stamina.is_poisoned(player)
-	return player:get_attribute("stamina:poisoned") == "yes"
+	return player:get_attribute(attribute.poisoned) == "yes"
 end
 
 function stamina.set_poisoned(player, poisoned)
 	if poisoned then
-		player:hud_change(player:get_attribute("stamina:hud_id"), "text", "stamina_hud_poison.png")
-		player:set_attribute("stamina:poisoned", "yes")
+		player:hud_change(player:get_attribute(attribute.hud_id), "text", "stamina_hud_poison.png")
+		player:set_attribute(attribute.poisoned, "yes")
 	else
-		player:hud_change(player:get_attribute("stamina:hud_id"), "text", "stamina_hud_fg.png")
-		player:set_attribute("stamina:poisoned", "no")
+		player:hud_change(player:get_attribute(attribute.hud_id), "text", "stamina_hud_fg.png")
+		player:set_attribute(attribute.poisoned, "no")
 	end
 end
 
@@ -160,13 +170,24 @@ function stamina.poison(player, ticks, interval)
 	stamina.set_poisoned(player, true)
 	poison_tick(player, ticks, interval, 0)
 end
+--- END POISON API ---
+--- EXHAUSTION API ---
+stamina.exhaustion_reasons = {
+	jump = 'jump',
+	move = 'move',
+	sprint = 'sprint',
+	place = 'place',
+	dig = 'dig',
+	craft = 'craft',
+	punch = 'punch',
+}
 
 function stamina.get_exhaustion(player)
-	return get_int_attribute(player, "stamina:exhaustion")
+	return get_int_attribute(player, attribute.exhaustion)
 end
 
 function stamina.set_exhaustion(player, exhaustion)
-	player:set_attribute("stamina:exhaustion", exhaustion)
+	player:set_attribute(attribute.exhaustion, exhaustion)
 end
 
 stamina.registered_on_exhaust_players = {}
@@ -175,10 +196,10 @@ function stamina.register_on_exhaust_player(fun)
 end
 
 function stamina.exhaust_player(player, change, cause)
-	for _, fun in ipairs(stamina.registered_on_exhaust_players) do
-		local rv = fun(player, change, cause)
-		if rv == true then
-			return
+	for _, callback in ipairs(stamina.registered_on_exhaust_players) do
+		local result = callback(player, change, cause)
+		if result then
+			return result
 		end
 	end
 
@@ -197,8 +218,8 @@ function stamina.exhaust_player(player, change, cause)
 
 	stamina.set_exhaustion(player, exhaustion)
 end
-
--- Sprint settings and function
+--- END EXHAUSTION API ---
+--- SPRINTING API ---
 stamina.registered_on_sprintings = {}
 function stamina.register_on_sprinting(fun)
 	table.insert(stamina.registered_on_sprintings, fun)
@@ -245,9 +266,106 @@ function stamina.set_sprinting(player, sprinting)
 
 		player:set_physics_override(def)
 	end
+
+	if settings.sprint_particles and sprinting then
+		local pos = player:getpos()
+		local node = minetest.get_node({x = pos.x, y = pos.y - 1, z = pos.z})
+		if node.name ~= "air" then
+			minetest.add_particlespawner({
+				amount = 5,
+				time = 0.01,
+				minpos = {x = pos.x - 0.25, y = pos.y + 0.1, z = pos.z - 0.25},
+				maxpos = {x = pos.x + 0.25, y = pos.y + 0.1, z = pos.z + 0.25},
+				minvel = {x = -0.5, y = 1, z = -0.5},
+				maxvel = {x = 0.5, y = 2, z = 0.5},
+				minacc = {x = 0, y = -5, z = 0},
+				maxacc = {x = 0, y = -12, z = 0},
+				minexptime = 0.25,
+				maxexptime = 0.5,
+				minsize = 0.5,
+				maxsize = 1.0,
+				vertical = false,
+				collisiondetection = false,
+				texture = "default_dirt.png",
+			})
+		end
+	end
 end
+--- END SPRINTING API ---
 
 -- Time based stamina functions
+local function move_tick()
+	for _,player in ipairs(minetest.get_connected_players()) do
+		local controls = player:get_player_control()
+		local is_moving = controls.up or controls.down or controls.left or controls.right
+		local velocity = player:get_player_velocity()
+		local has_velocity = velocity.x ~= 0 or velocity.z ~= 0
+
+		if controls.jump then
+			stamina.exhaust_player(player, settings.exhaust_jump, stamina.exhaustion_reasons.jump)
+		elseif is_moving and has_velocity then
+			stamina.exhaust_player(player, settings.exhaust_move, stamina.exhaustion_reasons.move)
+		end
+
+		if settings.sprint then
+			local can_sprint = (
+				controls.aux1 and
+				not minetest.check_player_privs(player, {fast = true}) and
+				stamina.get_saturation(player) > settings.sprint_lvl
+			)
+
+			if can_sprint then
+				stamina.set_sprinting(player, true)
+				if is_moving and has_velocity then
+					stamina.exhaust_player(player, settings.exhaust_sprint, stamina.exhaustion_reasons.sprint)
+				end
+			else
+				stamina.set_sprinting(player, false)
+			end
+		end
+	end
+end
+
+local function stamina_tick()
+	-- lower saturation by 1 point after settings.tick second(s)
+	for _,player in ipairs(minetest.get_connected_players()) do
+		local saturation = stamina.get_saturation(player)
+		if saturation > settings.tick_min then
+			stamina.update_saturation(player, saturation - 1)
+		end
+	end
+end
+
+local function health_tick()
+	-- heal or damage player, depending on saturation
+	for _,player in ipairs(minetest.get_connected_players()) do
+		local air = player:get_breath() or 0
+		local hp = player:get_hp()
+		local saturation = stamina.get_saturation(player)
+
+		-- don't heal if dead, drowning, or poisoned
+		local should_heal = (
+			saturation >= settings.heal_lvl and
+			saturation >= hp and
+			hp > 0 and
+			air > 0
+			and not stamina.is_poisoned(player)
+		)
+		-- or damage player by 1 hp if saturation is < 2 (of 30)
+		local is_starving = (
+			saturation < settings.starve_lvl and
+			hp > 0
+		)
+
+		if should_heal then
+			player:set_hp(hp + settings.heal)
+			stamina.update_saturation(player, saturation - 1)
+		elseif is_starving then
+			player:set_hp(hp - settings.starve)
+		end
+	end
+end
+
 local stamina_timer = 0
 local health_timer = 0
 local action_timer = 0
@@ -258,100 +376,18 @@ local function stamina_globaltimer(dtime)
 	action_timer = action_timer + dtime
 
 	if action_timer > settings.move_tick then
-		for _,player in ipairs(minetest.get_connected_players()) do
-			local controls = player:get_player_control()
-			-- Determine if the player is walking
-			if controls.jump then
-				stamina.exhaust_player(player, settings.exhaust_jump, 'jump')
-			elseif controls.up or controls.down or controls.left or controls.right then
-				stamina.exhaust_player(player, settings.exhaust_move, 'move')
-			end
-
-			--- START sprint
-			if settings.sprint then
-				-- check if player can sprint (stamina must be over 6 points)
-				if controls.aux1 and controls.up
-				and not minetest.check_player_privs(player, {fast = true})
-				and stamina.get_level(player) > 6 then
-
-					stamina.set_sprinting(player, true)
-
-					-- create particles behind player when sprinting
-					if settings.sprint_particles then
-
-						local pos = player:getpos()
-						local node = minetest.get_node({
-							x = pos.x, y = pos.y - 1, z = pos.z})
-
-						if node.name ~= "air" then
-
-						minetest.add_particlespawner({
-							amount = 5,
-							time = 0.01,
-							minpos = {x = pos.x - 0.25, y = pos.y + 0.1, z = pos.z - 0.25},
-							maxpos = {x = pos.x + 0.25, y = pos.y + 0.1, z = pos.z + 0.25},
-							minvel = {x = -0.5, y = 1, z = -0.5},
-							maxvel = {x = 0.5, y = 2, z = 0.5},
-							minacc = {x = 0, y = -5, z = 0},
-							maxacc = {x = 0, y = -12, z = 0},
-							minexptime = 0.25,
-							maxexptime = 0.5,
-							minsize = 0.5,
-							maxsize = 1.0,
-							vertical = false,
-							collisiondetection = false,
-							texture = "default_dirt.png",
-						})
-
-						end
-					end
-
-					-- Lower the player's stamina when sprinting
-					local level = stamina.get_level(player)
-					stamina.update_level(player, level - (settings.sprint_drain * settings.move_tick))
-				else
-					stamina.set_sprinting(player, false)
-				end
-			end
-			-- END sprint
-
-		end
 		action_timer = 0
+		move_tick()
 	end
 
-	-- lower saturation by 1 point after settings.tick second(s)
 	if stamina_timer > settings.tick then
-		for _,player in ipairs(minetest.get_connected_players()) do
-			local h = stamina.get_level(player)
-			if h > settings.tick_min then
-				stamina.update_level(player, h - 1)
-			end
-		end
 		stamina_timer = 0
+		stamina_tick()
 	end
 
-	-- heal or damage player, depending on saturation
 	if health_timer > settings.health_tick then
-		for _,player in ipairs(minetest.get_connected_players()) do
-			local air = player:get_breath() or 0
-			local hp = player:get_hp()
-
-			-- don't heal if drowning or dead
-			-- TODO: don't heal if poisoned?
-			local h = stamina.get_level(player)
-			if h >= settings.heal_lvl and h >= hp and hp > 0 and air > 0
-					and not stamina.is_poisoned(player) then
-				player:set_hp(hp + settings.heal)
-				stamina.update_level(player, h - 1)
-			end
-
-			-- or damage player by 1 hp if saturation is < 2 (of 30)
-			if stamina.get_level(player) < settings.starve_lvl and hp > 0 then
-				player:set_hp(hp - settings.starve)
-			end
-		end
-
 		health_timer = 0
+		health_tick()
 	end
 end
 
@@ -369,14 +405,14 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 		return itemstack
 	end
 
-	local level = stamina.get_level(player) or 0
+	local level = stamina.get_saturation(player) or 0
 	if level >= settings.visual_max then
 		return itemstack
 	end
 
 	if hp_change > 0 then
 		level = level + hp_change
-		stamina.update_level(player, level)
+		stamina.update_saturation(player, level)
 	else
 		-- assume hp_change < 0.
 		stamina.poison(player, 2.0, -hp_change)
@@ -427,9 +463,9 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 end
 
 -- stamina is disabled if damage is disabled
-if enable_damage and settings.enabled then
+if enable_damage then
 	minetest.register_on_joinplayer(function(player)
-		local level = stamina.get_level(player) or settings.visual_max
+		local level = stamina.get_saturation(player) or settings.visual_max
 		local id = player:hud_add({
 			name = "stamina",
 			hud_elem_type = "statbar",
@@ -441,8 +477,8 @@ if enable_damage and settings.enabled then
 			offset = {x = -266, y = -110},
 			max = 0,
 		})
-		stamina.set_level(player, level)
-		player:set_attribute("stamina:hud_id", id)
+		stamina.set_saturation(player, level)
+		player:set_attribute(attribute.hud_id, id)
 		-- reset poisoned
 		stamina.set_poisoned(player, false)
 	end)
@@ -450,18 +486,18 @@ if enable_damage and settings.enabled then
 	minetest.register_globalstep(stamina_globaltimer)
 
 	minetest.register_on_placenode(function(pos, oldnode, player, ext)
-		stamina.exhaust_player(player, settings.exhaust_place, 'place')
+		stamina.exhaust_player(player, settings.exhaust_place, stamina.exhaustion_reasons.place)
 	end)
 	minetest.register_on_dignode(function(pos, oldnode, player, ext)
-		stamina.exhaust_player(player, settings.exhaust_dig, 'dig')
+		stamina.exhaust_player(player, settings.exhaust_dig, stamina.exhaustion_reasons.dig)
 	end)
 	minetest.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
-		stamina.exhaust_player(player, settings.exhaust_craft, 'craft')
+		stamina.exhaust_player(player, settings.exhaust_craft, stamina.exhaustion_reasons.craft)
 	end)
 	minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
-		stamina.exhaust_player(hitter, settings.exhaust_punch, 'punch')
+		stamina.exhaust_player(hitter, settings.exhaust_punch, stamina.exhaustion_reasons.punch)
 	end)
 	minetest.register_on_respawnplayer(function(player)
-		stamina.update_level(player, settings.visual_max)
+		stamina.update_saturation(player, settings.visual_max)
 	end)
 end

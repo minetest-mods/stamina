@@ -11,6 +11,7 @@ stamina.exhaust_move     (exhaustion for moving)                                
 stamina.exhaust_jump     (exhaustion for jumping)                                 float 5
 stamina.exhaust_craft    (exhaustion for crafting)                                float 20
 stamina.exhaust_punch    (exhaustion for punching)                                float 40
+stamina.exhaust_sprint   (exhaustion for sprinting)                               float 28
 stamina.exhaust_lvl      (exhaustion level at which saturation gets lowered)      float 160
 stamina.heal             (amount of HP a player gains per stamina.health_tick)    int 1 0 20
 stamina.heal_lvl         (minimum saturation needed for healing)                  int 5 1 20
@@ -19,4 +20,3 @@ stamina.starve_lvl       (maximum stamina needed for starving)                  
 stamina.visual_max       (hud bar only extends to 20)                             int 20 2 20
 stamina.sprint_speed     (how much faster a player can run if satiated)           float 0.8  0 2
 stamina.sprint_jump      (how much faster a player can jump if satiated)          float 0.1  0 2
-stamina.sprint_drain     (how fast to drain saturation while sprinting)           float 0.35 0 1
