@@ -88,7 +88,7 @@ function stamina.update_level(player, level)
 	end
 
 	-- players without interact priv cannot eat
-	if old < settings.heal_lvl and minetest.check_player_privs(player, {interact=false}) then
+	if old < settings.heal_lvl and not minetest.check_player_privs(player, {interact=true}) then
 		return
 	end
 
