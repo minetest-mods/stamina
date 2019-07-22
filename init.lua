@@ -43,7 +43,15 @@ local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("a
 local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
 
 local function is_player(player)
-	return player and player.is_player and player:is_player() and player.set_attribute and player.get_player_name and player:get_player_name()
+	return (
+		player and
+		not player.is_fake_player and
+		player.is_player and
+		player:is_player() and
+		player.set_attribute and
+		player.get_player_name and
+		player:get_player_name()
+	)
 end
 
 local function get_int_attribute(player, key)
