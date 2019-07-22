@@ -5,40 +5,47 @@ local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("a
 local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
 
 function stamina.log(level, message, ...)
-	return minetest.log(level, ('[%s] %s'):format(modname, message:format(...)))
+	return minetest.log(level, ("[%s] %s"):format(modname, message:format(...)))
 end
 
+if not enable_damage then
+	stamina.log("warning", "Stamina is disabled when damage is disabled.")
+else
+
 local function get_setting(key, default)
-	local setting = minetest.settings:get('stamina.' .. key)
+	local setting = minetest.settings:get("stamina." .. key)
 	if setting and not tonumber(setting) then
-		stamina.log('warning', 'invalid value for setting %s: %q. Using default %q.', key, setting, default)
+		stamina.log("warning", "Invalid value for setting %s: %q. Using default %q.", key, setting, default)
 	end
 	return tonumber(setting) or default
 end
 
 stamina.settings = {
-	sprint = minetest.settings:get_bool('stamina.sprint', true),
-	sprint_particles = minetest.settings:get_bool('stamina.sprint_particles', true),
-	sprint_lvl = get_setting('sprint_lvl', 6), -- minimum saturation to be able to sprint
-	tick = get_setting('tick', 800), -- time in seconds after that 1 saturation point is taken
-	tick_min = get_setting('tick_min', 4), -- stamina ticks won't reduce saturation below this level
-	health_tick = get_setting('health_tick', 4), -- time in seconds after player gets healed/damaged
-	move_tick = get_setting('move_tick', 0.5), -- time in seconds after the movement is checked
-	exhaust_dig = get_setting('exhaust_dig', 3), -- exhaustion for digging a node
-	exhaust_place = get_setting('exhaust_place', 1), -- exhaustion for placing a node
-	exhaust_move = get_setting('exhaust_move', 1.5), -- exhaustion for moving
-	exhaust_jump = get_setting('exhaust_jump', 5), -- exhaustion for jumping
-	exhaust_craft = get_setting('exhaust_craft', 20), -- exhaustion for crafting
-	exhaust_punch = get_setting('exhaust_punch', 40), -- exhaustion for punching
-	exhaust_sprint = get_setting('exhaust_sprint', 28), -- exhaustion for running
-	exhaust_lvl = get_setting('exhaust_lvl', 160), -- exhaustion level at which saturation gets lowered
-	heal = get_setting('heal', 1), -- amount of HP a player gains per stamina.health_tick
-	heal_lvl = get_setting('heal_lvl', 5), -- minimum saturation needed for healing
-	starve = get_setting('starve', 1), -- amount of HP a player loses per stamina.health_tick
-	starve_lvl = get_setting('starve_lvl', 3), -- maximum stamina needed for starving
-	visual_max = get_setting('visual_max', 20), -- hud bar only extends to 20
-	sprint_speed = get_setting('sprint_speed', 0.8), -- how much faster a player can run if satiated
-	sprint_jump = get_setting('sprint_jump', 0.1), -- how much faster a player can jump if satiated
+	-- see settingtypes.txt for descriptions
+	eat_particles = minetest.settings:get_bool("stamina.eat_particles", true),
+	sprint = minetest.settings:get_bool("stamina.sprint", true),
+	sprint_particles = minetest.settings:get_bool("stamina.sprint_particles", true),
+	sprint_lvl = get_setting("sprint_lvl", 6),
+	sprint_speed = get_setting("sprint_speed", 0.8),
+	sprint_jump = get_setting("sprint_jump", 0.1),
+	tick = get_setting("tick", 800),
+	tick_min = get_setting("tick_min", 4),
+	health_tick = get_setting("health_tick", 4),
+	move_tick = get_setting("move_tick", 0.5),
+	poison_tick = get_setting("poison_tick", 2.0),
+	exhaust_dig = get_setting("exhaust_dig", 3),
+	exhaust_place = get_setting("exhaust_place", 1),
+	exhaust_move = get_setting("exhaust_move", 1.5),
+	exhaust_jump = get_setting("exhaust_jump", 5),
+	exhaust_craft = get_setting("exhaust_craft", 20),
+	exhaust_punch = get_setting("exhaust_punch", 40),
+	exhaust_sprint = get_setting("exhaust_sprint", 28),
+	exhaust_lvl = get_setting("exhaust_lvl", 160),
+	heal = get_setting("heal", 1),
+	heal_lvl = get_setting("heal_lvl", 5),
+	starve = get_setting("starve", 1),
+	starve_lvl = get_setting("starve_lvl", 3),
+	visual_max = get_setting("visual_max", 20),
 }
 local settings = stamina.settings
 
@@ -171,13 +178,14 @@ end
 --- END POISON API ---
 --- EXHAUSTION API ---
 stamina.exhaustion_reasons = {
-	jump = 'jump',
-	move = 'move',
-	sprint = 'sprint',
-	place = 'place',
-	dig = 'dig',
-	craft = 'craft',
-	punch = 'punch',
+	craft = "craft",
+	dig = "dig",
+	heal = "heal",
+	jump = "jump",
+	move = "move",
+	place = "place",
+	punch = "punch",
+	sprint = "sprint",
 }
 
 function stamina.get_exhaustion(player)
@@ -209,8 +217,8 @@ function stamina.exhaust_player(player, change, cause)
 
 	exhaustion = exhaustion + change
 
-	if exhaustion > settings.exhaust_lvl then
-		exhaustion = 0
+	if exhaustion >= settings.exhaust_lvl then
+		exhaustion = exhaustion - settings.exhaust_lvl
 		stamina.change(player, -1)
 	end
 
@@ -357,7 +365,7 @@ local function health_tick()
 
 		if should_heal then
 			player:set_hp(hp + settings.heal)
-			stamina.update_saturation(player, saturation - 1)
+			stamina.exhaust_player(player, settings.exhaust_lvl, stamina.exhaustion_reasons.heal)
 		elseif is_starving then
 			player:set_hp(hp - settings.starve)
 		end
@@ -405,41 +413,44 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 
 	local level = stamina.get_saturation(player) or 0
 	if level >= settings.visual_max then
+		-- don't eat if player is full
 		return itemstack
 	end
 
-	if hp_change > 0 then
-		level = level + hp_change
-		stamina.update_saturation(player, level)
-	else
-		-- assume hp_change < 0.
-		stamina.poison(player, 2.0, -hp_change)
-	end
-
+	local itemname = itemstack:get_name()
+	stamina.log("action", "%s eats %s", player:get_player_name(), itemname)
 	minetest.sound_play("stamina_eat", {to_player = player:get_player_name(), gain = 0.7})
 
-	-- particle effect when eating
-	local pos = player:getpos()
-	pos.y = pos.y + 1.5 -- mouth level
-	local itemname = itemstack:get_name()
-	local texture  = minetest.registered_items[itemname].inventory_image
-	local dir = player:get_look_dir()
+	if hp_change > 0 then
+		stamina.change_saturation(player, hp_change)
+	else
+		-- assume hp_change < 0.
+		stamina.poison(player, -hp_change, settings.poison_tick)
+	end
 
-	minetest.add_particlespawner({
-		amount = 5,
-		time = 0.1,
-		minpos = pos,
-		maxpos = pos,
-		minvel = {x = dir.x - 1, y = dir.y, z = dir.z - 1},
-		maxvel = {x = dir.x + 1, y = dir.y, z = dir.z + 1},
-		minacc = {x = 0, y = -5, z = 0},
-		maxacc = {x = 0, y = -9, z = 0},
-		minexptime = 1,
-		maxexptime = 1,
-		minsize = 1,
-		maxsize = 2,
-		texture = texture,
-	})
+	if settings.eat_particles then
+		-- particle effect when eating
+		local pos = player:getpos()
+		pos.y = pos.y + 1.5 -- mouth level
+		local texture  = minetest.registered_items[itemname].inventory_image
+		local dir = player:get_look_dir()
+
+		minetest.add_particlespawner({
+			amount = 5,
+			time = 0.1,
+			minpos = pos,
+			maxpos = pos,
+			minvel = {x = dir.x - 1, y = dir.y, z = dir.z - 1},
+			maxvel = {x = dir.x + 1, y = dir.y, z = dir.z + 1},
+			minacc = {x = 0, y = -5, z = 0},
+			maxacc = {x = 0, y = -9, z = 0},
+			minexptime = 1,
+			maxexptime = 1,
+			minsize = 1,
+			maxsize = 2,
+			texture = texture,
+		})
+	end
 
 	itemstack:take_item()
 
@@ -460,42 +471,41 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 	return itemstack
 end
 
--- stamina is disabled if damage is disabled
-if enable_damage then
-	minetest.register_on_joinplayer(function(player)
-		local level = stamina.get_saturation(player) or settings.visual_max
-		local id = player:hud_add({
-			name = "stamina",
-			hud_elem_type = "statbar",
-			position = {x = 0.5, y = 1},
-			size = {x = 24, y = 24},
-			text = "stamina_hud_fg.png",
-			number = level,
-			alignment = {x = -1, y = -1},
-			offset = {x = -266, y = -110},
-			max = 0,
-		})
-		stamina.set_saturation(player, level)
-		player:set_attribute(attribute.hud_id, id)
-		-- reset poisoned
-		stamina.set_poisoned(player, false)
-	end)
+minetest.register_on_joinplayer(function(player)
+	local level = stamina.get_saturation(player) or settings.visual_max
+	local id = player:hud_add({
+		name = "stamina",
+		hud_elem_type = "statbar",
+		position = {x = 0.5, y = 1},
+		size = {x = 24, y = 24},
+		text = "stamina_hud_fg.png",
+		number = level,
+		alignment = {x = -1, y = -1},
+		offset = {x = -266, y = -110},
+		max = 0,
+	})
+	stamina.set_saturation(player, level)
+	player:set_attribute(attribute.hud_id, id)
+	-- reset poisoned
+	stamina.set_poisoned(player, false)
+end)
 
-	minetest.register_globalstep(stamina_globaltimer)
+minetest.register_globalstep(stamina_globaltimer)
 
-	minetest.register_on_placenode(function(pos, oldnode, player, ext)
-		stamina.exhaust_player(player, settings.exhaust_place, stamina.exhaustion_reasons.place)
-	end)
-	minetest.register_on_dignode(function(pos, oldnode, player, ext)
-		stamina.exhaust_player(player, settings.exhaust_dig, stamina.exhaustion_reasons.dig)
-	end)
-	minetest.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
-		stamina.exhaust_player(player, settings.exhaust_craft, stamina.exhaustion_reasons.craft)
-	end)
-	minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
-		stamina.exhaust_player(hitter, settings.exhaust_punch, stamina.exhaustion_reasons.punch)
-	end)
-	minetest.register_on_respawnplayer(function(player)
-		stamina.update_saturation(player, settings.visual_max)
-	end)
-end
+minetest.register_on_placenode(function(pos, oldnode, player, ext)
+	stamina.exhaust_player(player, settings.exhaust_place, stamina.exhaustion_reasons.place)
+end)
+minetest.register_on_dignode(function(pos, oldnode, player, ext)
+	stamina.exhaust_player(player, settings.exhaust_dig, stamina.exhaustion_reasons.dig)
+end)
+minetest.register_on_craft(function(itemstack, player, old_craft_grid, craft_inv)
+	stamina.exhaust_player(player, settings.exhaust_craft, stamina.exhaustion_reasons.craft)
+end)
+minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
+	stamina.exhaust_player(hitter, settings.exhaust_punch, stamina.exhaustion_reasons.punch)
+end)
+minetest.register_on_respawnplayer(function(player)
+	stamina.update_saturation(player, settings.visual_max)
+end)
+
+end -- end check for enable_damage
