@@ -120,8 +120,10 @@ end
 
 function stamina.set_poisoned(player, poisoned)
 	if poisoned then
+		player:hud_change(player:get_attribute("stamina:hud_id"), "text", "stamina_hud_poison.png")
 		player:set_attribute("stamina:poisoned", "yes")
 	else
+		player:hud_change(player:get_attribute("stamina:hud_id"), "text", "stamina_hud_fg.png")
 		player:set_attribute("stamina:poisoned", "no")
 	end
 end
@@ -130,7 +132,6 @@ local function poison_tick(player, ticks, interval, elapsed)
 	if not stamina.is_poisoned(player) then
 		return
 	elseif elapsed > ticks then
-		player:hud_change(player:get_attribute("stamina:hud_id"), "text", "stamina_hud_fg.png")
 		stamina.set_poisoned(player, false)
 	else
 		local hp = player:get_hp() - 1
@@ -157,7 +158,6 @@ function stamina.poison(player, ticks, interval)
 		return
 	end
 	stamina.set_poisoned(player, true)
-	player:hud_change(player:get_attribute("stamina:hud_id"), "text", "stamina_hud_poison.png")
 	poison_tick(player, ticks, interval, 0)
 end
 
