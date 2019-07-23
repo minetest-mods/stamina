@@ -313,6 +313,7 @@ local function move_tick()
 		if settings.sprint then
 			local can_sprint = (
 				controls.aux1 and
+				not player:get_attach() and
 				not minetest.check_player_privs(player, {fast = true}) and
 				stamina.get_saturation(player) > settings.sprint_lvl
 			)
