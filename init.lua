@@ -271,7 +271,7 @@ function stamina.set_sprinting(player, sprinting)
 	if settings.sprint_particles and sprinting then
 		local pos = player:getpos()
 		local node = minetest.get_node({x = pos.x, y = pos.y - 1, z = pos.z})
-		if node.name ~= "air" then
+		if node.drawtype ~= "airlike" then
 			minetest.add_particlespawner({
 				amount = 5,
 				time = 0.01,
