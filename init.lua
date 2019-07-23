@@ -1,16 +1,11 @@
 stamina = {}
 local modname = minetest.get_current_modname()
-local enable_damage = minetest.settings:get_bool("enable_damage")
 local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
 local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
 
 function stamina.log(level, message, ...)
 	return minetest.log(level, ("[%s] %s"):format(modname, message:format(...)))
 end
-
-if not enable_damage then
-	stamina.log("warning", "Stamina is disabled when damage is disabled.")
-else
 
 local function get_setting(key, default)
 	local setting = minetest.settings:get("stamina." .. key)
@@ -508,5 +503,3 @@ end)
 minetest.register_on_respawnplayer(function(player)
 	stamina.update_saturation(player, settings.visual_max)
 end)
-
-end -- end check for enable_damage
