@@ -300,7 +300,9 @@ local function move_tick()
 		local controls = player:get_player_control()
 		local is_moving = controls.up or controls.down or controls.left or controls.right
 		local velocity = player:get_player_velocity()
-		local has_velocity = velocity.x ~= 0 or velocity.z ~= 0
+		velocity.y = 0
+		local horizontal_speed = vector.length(velocity)
+		local has_velocity = horizontal_speed > 0.05
 
 		if controls.jump then
 			stamina.exhaust_player(player, settings.exhaust_jump, stamina.exhaustion_reasons.jump)
