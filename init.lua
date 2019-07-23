@@ -462,6 +462,7 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 			if inv:room_for_item("main", {name=replace_with_item}) then
 				inv:add_item("main", replace_with_item)
 			else
+				local pos = player:getpos()
 				pos.y = math.floor(pos.y - 1.0)
 				minetest.add_item(pos, replace_with_item)
 			end
