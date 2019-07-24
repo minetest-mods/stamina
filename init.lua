@@ -421,11 +421,13 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 	end
 
 	local itemname = itemstack:get_name()
-	stamina.log("action", "%s eats %s", player:get_player_name(), itemname)
+	stamina.log("action", "%s eats %s for %s stamina, replace with %s",
+			player:get_player_name(), itemname, hp_change, replace_with_item)
 	minetest.sound_play("stamina_eat", {to_player = player:get_player_name(), gain = 0.7})
 
 	if hp_change > 0 then
 		stamina.change_saturation(player, hp_change)
+		stamina.set_exhaustion(player, 0)
 	else
 		-- assume hp_change < 0.
 		stamina.poison(player, -hp_change, settings.poison_tick)
