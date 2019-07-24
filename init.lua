@@ -1,3 +1,8 @@
+if not minetest.settings:get_bool("enable_damage") then
+	minetest.log("warning", "[stamina] Stamina will not load if damage is disabled (enable_damage=false)")
+	return
+end
+
 stamina = {}
 local modname = minetest.get_current_modname()
 local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
