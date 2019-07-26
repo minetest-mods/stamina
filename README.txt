@@ -35,11 +35,7 @@ This mod intercepts minetest.item_eat(), and applies the hp_change
 as stamina change. The value can be positive (increase stamina) or
 negative (periodically damage the player by 1 hp).
 
-Callbacks that are registered via minetest.register_on_item_eat()
-are called after this mod, so the itemstack will have changed already
-when callbacks are called. You can get the original itemstack as 6th
-parameter of your function then.
-
+See API.txt for information on the API.
 
 License:
 --------
