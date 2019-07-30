@@ -37,13 +37,14 @@ stamina.register_on_poison(function(player, ticks, interval))
 -------------------------
 stamina.get_exhaustion(player)
     Gets a player's exhaustion level.
+    Value is between 0 and `stamina.exhaust_lvl` (default: 160)
 
-stamina.set_exhaustion(player)
+stamina.set_exhaustion(player, level)
     Sets a player's exhaustion level.
 
 stamina.exhaust_player(player, change, cause)
     Update a player's exhaustion by "change".
-    If the player's exhaustion exceeds the configured value, stamina
+    If the player's exhaustion exceeds `stamina.exhaust_lvl`, stamina
     is taken and exhaustion is reset.
     Cause is an optional argument indicating the origin of the exhaustion.
     Callbacks are processed before exhausting the player.
