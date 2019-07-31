@@ -3,7 +3,7 @@ allow_defined_top = true
 
 read_globals = {
 	"DIR_DELIM",
-	"minetest", "core",
+	"minetest",
 	"dump",
 	"vector", "nodeupdate",
 	"VoxelManip", "VoxelArea",
@@ -11,9 +11,10 @@ read_globals = {
 	"intllib",
 	"default",
 	"armor",
+	"player_monoids",
 }
 
 globals = {
-	core = { fields = { "do_item_eat" }},
+	minetest = { fields = { "do_item_eat" }},
 }
 
