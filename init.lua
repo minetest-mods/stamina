@@ -13,11 +13,12 @@ function stamina.log(level, message, ...)
 end
 
 local function get_setting(key, default)
-	local setting = minetest.settings:get("stamina." .. key)
-	if setting and not tonumber(setting) then
-		stamina.log("warning", "Invalid value for setting %s: %q. Using default %q.", key, setting, default)
+	local value = minetest.settings:get("stamina." .. key)
+	local num_value = tonumber(value)
+	if value and not num_value then
+		stamina.log("warning", "Invalid value for setting %s: %q. Using default %q.", key, value, default)
 	end
-	return tonumber(setting) or default
+	return num_value or default
 end
 
 stamina.settings = {
@@ -59,30 +60,36 @@ local attribute = {
 local function is_player(player)
 	return (
 		player and
-		not player.is_fake_player and
-		player.get_attribute and  -- check for pipeworks fake player
 		player.is_player and
-		player:is_player()
+		player:is_player() and
+		not player.is_fake_player
 	)
 end
 
-local function get_int_attribute(player, key)
-	local level = player:get_attribute(key)
-	if level then
-		return tonumber(level)
+local function set_player_attribute(player, key, value)
+	if player.get_meta then
+		player:get_meta():set_string(key, tostring(value))
 	else
-		return nil
+		player:set_attribute(key, value)
+	end
+end
+
+local function get_player_attribute(player, key)
+	if player.get_meta then
+		return player:get_meta():get_string(key)
+	else
+		return player:get_attribute(key)
 	end
 end
 --- SATURATION API ---
 function stamina.get_saturation(player)
-	return get_int_attribute(player, attribute.saturation)
+	return tonumber(get_player_attribute(player, attribute.saturation))
 end
 
 function stamina.set_saturation(player, level)
-	player:set_attribute(attribute.saturation, level)
+	set_player_attribute(player, attribute.saturation, level)
 	player:hud_change(
-		player:get_attribute(attribute.hud_id),
+		get_player_attribute(player, attribute.hud_id),
 		"number",
 		math.min(settings.visual_max, level)
 	)
@@ -130,16 +137,17 @@ stamina.change = stamina.change_saturation -- for backwards compatablity
 --- END SATURATION API ---
 --- POISON API ---
 function stamina.is_poisoned(player)
-	return player:get_attribute(attribute.poisoned) == "yes"
+	return get_player_attribute(player, attribute.poisoned) == "yes"
 end
 
 function stamina.set_poisoned(player, poisoned)
+	local hud_id = get_player_attribute(player, attribute.hud_id)
 	if poisoned then
-		player:hud_change(player:get_attribute(attribute.hud_id), "text", "stamina_hud_poison.png")
-		player:set_attribute(attribute.poisoned, "yes")
+		player:hud_change(hud_id, "text", "stamina_hud_poison.png")
+		set_player_attribute(player, attribute.poisoned, "yes")
 	else
-		player:hud_change(player:get_attribute(attribute.hud_id), "text", "stamina_hud_fg.png")
-		player:set_attribute(attribute.poisoned, "no")
+		player:hud_change(hud_id, "text", "stamina_hud_fg.png")
+		set_player_attribute(player, attribute.poisoned, "no")
 	end
 end
 
@@ -189,11 +197,11 @@ stamina.exhaustion_reasons = {
 }
 
 function stamina.get_exhaustion(player)
-	return get_int_attribute(player, attribute.exhaustion)
+	return tonumber(get_player_attribute(player, attribute.exhaustion))
 end
 
 function stamina.set_exhaustion(player, exhaustion)
-	player:set_attribute(attribute.exhaustion, exhaustion)
+	set_player_attribute(player, attribute.exhaustion, exhaustion)
 end
 
 stamina.registered_on_exhaust_players = {}
@@ -493,7 +501,7 @@ minetest.register_on_joinplayer(function(player)
 		max = 0,
 	})
 	stamina.set_saturation(player, level)
-	player:set_attribute(attribute.hud_id, id)
+	set_player_attribute(player, attribute.hud_id, id)
 	-- reset poisoned
 	stamina.set_poisoned(player, false)
 end)
