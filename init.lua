@@ -59,9 +59,7 @@ local attribute = {
 
 local function is_player(player)
 	return (
-		player and
-		player.is_player and
-		player:is_player() and
+		minetest.is_player(player) and
 		not player.is_fake_player
 	)
 end
