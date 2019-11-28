@@ -52,7 +52,6 @@ local settings = stamina.settings
 
 local attribute = {
 	saturation = "stamina:level",
-	hud_id = "stamina:hud_id",
 	poisoned = "stamina:poisoned",
 	exhaustion = "stamina:exhaustion",
 }
@@ -66,7 +65,11 @@ end
 
 local function set_player_attribute(player, key, value)
 	if player.get_meta then
-		player:get_meta():set_string(key, tostring(value))
+		if value == nil then
+			player:get_meta():set_string(key, "")
+		else
+			player:get_meta():set_string(key, tostring(value))
+		end
 	else
 		player:set_attribute(key, value)
 	end
@@ -79,6 +82,17 @@ local function get_player_attribute(player, key)
 		return player:get_attribute(key)
 	end
 end
+
+local hud_ids_by_player_name = {}
+
+local function get_hud_id(player)
+	return hud_ids_by_player_name[player:get_player_name()]
+end
+
+local function set_hud_id(player, hud_id)
+	hud_ids_by_player_name[player:get_player_name()] = hud_id
+end
+
 --- SATURATION API ---
 function stamina.get_saturation(player)
 	return tonumber(get_player_attribute(player, attribute.saturation))
@@ -87,7 +101,7 @@ end
 function stamina.set_saturation(player, level)
 	set_player_attribute(player, attribute.saturation, level)
 	player:hud_change(
-		get_player_attribute(player, attribute.hud_id),
+		get_hud_id(player),
 		"number",
 		math.min(settings.visual_max, level)
 	)
@@ -139,7 +153,7 @@ function stamina.is_poisoned(player)
 end
 
 function stamina.set_poisoned(player, poisoned)
-	local hud_id = get_player_attribute(player, attribute.hud_id)
+	local hud_id = get_hud_id(player)
 	if poisoned then
 		player:hud_change(hud_id, "text", "stamina_hud_poison.png")
 		set_player_attribute(player, attribute.poisoned, "yes")
@@ -499,9 +513,15 @@ minetest.register_on_joinplayer(function(player)
 		max = 0,
 	})
 	stamina.set_saturation(player, level)
-	set_player_attribute(player, attribute.hud_id, id)
+	set_hud_id(player, id)
 	-- reset poisoned
 	stamina.set_poisoned(player, false)
+	-- remove legacy hud_id from player metadata
+	set_player_attribute(player, "stamina:hud_id", nil)
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	set_hud_id(player, nil)
 end)
 
 minetest.register_globalstep(stamina_globaltimer)
