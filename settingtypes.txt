@@ -21,3 +21,4 @@ stamina.visual_max       (hud bar only extends to 20)                           
 stamina.sprint_speed     (how much faster a player can run if satiated)           float 0.8  0 2
 stamina.sprint_jump      (how much faster a player can jump if satiated)          float 0.1  0 2
 stamina.eat_particles    (Whether to generate particles when eating)              bool true
+stamina.sprint_with_fast (Sprint when player has fast privilege?)                 bool false
