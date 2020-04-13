@@ -29,6 +29,7 @@ stamina.settings = {
 	sprint_lvl = get_setting("sprint_lvl", 6),
 	sprint_speed = get_setting("sprint_speed", 0.8),
 	sprint_jump = get_setting("sprint_jump", 0.1),
+	sprint_with_fast = minetest.settings:get_bool("stamina.sprint_with_fast", false),
 	tick = get_setting("tick", 800),
 	tick_min = get_setting("tick_min", 4),
 	health_tick = get_setting("health_tick", 4),
@@ -341,7 +342,7 @@ local function move_tick()
 			local can_sprint = (
 				controls.aux1 and
 				not player:get_attach() and
-				not minetest.check_player_privs(player, {fast = true}) and
+				(settings.sprint_with_fast or not minetest.check_player_privs(player, {fast = true})) and
 				stamina.get_saturation(player) > settings.sprint_lvl
 			)
 
