@@ -520,8 +520,8 @@ minetest.register_on_joinplayer(function(player)
 		offset = {x = -266, y = -110},
 		max = 0,
 	})
-	stamina.set_saturation(player, level)
 	set_hud_id(player, id)
+	stamina.set_saturation(player, level)
 	-- reset poisoned
 	stamina.set_poisoned(player, false)
 	-- remove legacy hud_id from player metadata
