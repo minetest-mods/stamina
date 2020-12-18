@@ -516,6 +516,8 @@ minetest.register_on_joinplayer(function(player)
 		size = {x = 24, y = 24},
 		text = "stamina_hud_fg.png",
 		number = level,
+		text2 = "stamina_hud_bg.png",
+		item = settings.visual_max,
 		alignment = {x = -1, y = -1},
 		offset = {x = -266, y = -110},
 		max = 0,
