@@ -465,7 +465,7 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 
 	if settings.eat_particles then
 		-- particle effect when eating
-		local pos = player:getpos()
+		local pos = player:get_pos()
 		pos.y = pos.y + 1.5 -- mouth level
 		local texture  = minetest.registered_items[itemname].inventory_image
 		local dir = player:get_look_dir()
