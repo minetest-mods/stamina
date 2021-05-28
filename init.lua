@@ -78,7 +78,8 @@ end
 
 local function get_player_attribute(player, key)
 	if player.get_meta then
-		return player:get_meta():get_string(key)
+		local meta = player:get_meta()
+		return meta and meta:get_string(key) or ""
 	else
 		return player:get_attribute(key)
 	end
