@@ -66,10 +66,11 @@ end
 
 local function set_player_attribute(player, key, value)
 	if player.get_meta then
-		if value == nil then
-			player:get_meta():set_string(key, "")
-		else
-			player:get_meta():set_string(key, tostring(value))
+		local meta = player:get_meta()
+		if meta and value == nil then
+			meta:set_string(key, "")
+		elseif meta then
+			meta:set_string(key, tostring(value))
 		end
 	else
 		player:set_attribute(key, value)
