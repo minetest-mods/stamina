@@ -299,7 +299,7 @@ function stamina.set_sprinting(player, sprinting)
 	end
 
 	if settings.sprint_particles and sprinting then
-		local pos = player:getpos()
+		local pos = player:get_pos()
 		local node = minetest.get_node({x = pos.x, y = pos.y - 1, z = pos.z})
 		local def = minetest.registered_nodes[node.name] or {}
 		local drawtype = def.drawtype
@@ -429,8 +429,8 @@ end
 
 local function show_eat_particles(player, itemname)
 	-- particle effect when eating
-	local pos = player:getpos()
-	pos.y = pos.y + 1.5 -- mouth level
+	local pos = player:get_pos()
+	pos.y = pos.y + (player:get_properties().eye_height * .923) -- assume mouth is slightly below eye_height
 	local dir = player:get_look_dir()
 
 	local def = minetest.registered_items[itemname]
@@ -516,7 +516,7 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 			if inv:room_for_item("main", {name=replace_with_item}) then
 				inv:add_item("main", replace_with_item)
 			else
-				local pos = player:getpos()
+				local pos = player:get_pos()
 				pos.y = math.floor(pos.y - 1.0)
 				minetest.add_item(pos, replace_with_item)
 			end
