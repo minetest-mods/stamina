@@ -175,7 +175,7 @@ local function poison_tick(player_name, ticks, interval, elapsed)
 	else
 		local hp = player:get_hp() - 1
 		if hp > 0 then
-			player:set_hp(hp)
+			player:set_hp(hp, "stamina:poison")
 		end
 		minetest.after(interval, poison_tick, player_name, ticks, interval, elapsed + 1)
 	end
@@ -394,10 +394,10 @@ local function health_tick()
 		)
 
 		if should_heal then
-			player:set_hp(hp + settings.heal)
+			player:set_hp(hp + settings.heal, "stamina:heal")
 			stamina.exhaust_player(player, settings.exhaust_lvl, stamina.exhaustion_reasons.heal)
 		elseif is_starving then
-			player:set_hp(hp - settings.starve)
+			player:set_hp(hp - settings.starve, "stamina:starve")
 		end
 	end
 end
