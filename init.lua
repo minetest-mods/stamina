@@ -377,12 +377,14 @@ local function health_tick()
 	for _,player in ipairs(minetest.get_connected_players()) do
 		local air = player:get_breath() or 0
 		local hp = player:get_hp()
+		local hp_max = player:get_properties().hp_max
 		local saturation = stamina.get_saturation(player)
 
 		-- don't heal if dead, drowning, or poisoned
 		local should_heal = (
 			saturation >= settings.heal_lvl and
 			saturation >= hp and
+			hp < hp_max and
 			hp > 0 and
 			air > 0
 			and not stamina.is_poisoned(player)
