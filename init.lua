@@ -509,23 +509,19 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 	end
 
 	itemstack:take_item()
-
-	if replace_with_item then
-		if itemstack:is_empty() then
-			itemstack:add_item(replace_with_item)
-		else
-			local inv = player:get_inventory()
-			if inv:room_for_item("main", {name=replace_with_item}) then
-				inv:add_item("main", replace_with_item)
-			else
-				local pos = player:get_pos()
-				pos.y = math.floor(pos.y - 1.0)
-				minetest.add_item(pos, replace_with_item)
-			end
+	player:set_wielded_item(itemstack)
+	replace_with_item = ItemStack(replace_with_item)
+	if not replace_with_item:is_empty() then
+		local inv = player:get_inventory()
+		replace_with_item = inv:add_item("main", replace_with_item)
+		if not replace_with_item:is_empty() then
+			local pos = player:get_pos()
+			pos.y = math.floor(pos.y - 1.0)
+			minetest.add_item(pos, replace_with_item)
 		end
 	end
 
-	return itemstack
+	return nil  -- don't overwrite wield item a second time
 end
 
 minetest.register_on_joinplayer(function(player)
