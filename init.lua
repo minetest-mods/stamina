@@ -481,8 +481,8 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 	end
 
 	local level = stamina.get_saturation(player) or 0
-	if level >= settings.visual_max then
-		-- don't eat if player is full
+	if level >= settings.visual_max and hp_change > 0 then
+		-- don't eat if player is full and item provides saturation
 		return itemstack
 	end
 
