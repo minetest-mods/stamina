@@ -499,8 +499,7 @@ function minetest.do_item_eat(hp_change, replace_with_item, itemstack, player, p
 	if hp_change > 0 then
 		stamina.change_saturation(player, hp_change)
 		stamina.set_exhaustion(player, 0)
-	else
-		-- assume hp_change < 0.
+	elseif hp_change < 0 then
 		stamina.poison(player, -hp_change, settings.poison_tick)
 	end
 
