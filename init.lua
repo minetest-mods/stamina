@@ -66,16 +66,16 @@ end
 
 local function set_player_attribute(player, key, value)
 	local meta = player:get_meta()
-	if meta and value == nil then
+	if value == nil then
 		meta:set_string(key, "")
-	elseif meta then
+	else
 		meta:set_string(key, tostring(value))
 	end
 end
 
 local function get_player_attribute(player, key)
 	local meta = player:get_meta()
-	return meta and meta:get_string(key) or ""
+	return meta:get_string(key)
 end
 
 local hud_ids_by_player_name = {}
@@ -154,7 +154,7 @@ function stamina.set_poisoned(player, poisoned)
 		set_player_attribute(player, attribute.poisoned, "yes")
 	else
 		player:hud_change(hud_id, "text", "stamina_hud_fg.png")
-		set_player_attribute(player, attribute.poisoned)
+		set_player_attribute(player, attribute.poisoned, nil)
 	end
 end
 
