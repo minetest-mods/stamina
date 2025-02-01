@@ -7,6 +7,7 @@ stamina = {}
 local modname = minetest.get_current_modname()
 local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
 local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
+local pova_mod = minetest.get_modpath("pova") and minetest.global_exists("pova")
 
 function stamina.log(level, message, ...)
 	return minetest.log(level, ("[%s] %s"):format(modname, message:format(...)))
@@ -263,6 +264,15 @@ function stamina.set_sprinting(player, sprinting)
 		else
 			player_monoids.speed:del_change(player, "stamina:physics")
 			player_monoids.jump:del_change(player, "stamina:physics")
+		end
+	elseif pova_mod then
+		if sprinting then
+			pova.add_override(player:get_player_name(), "stamina:physics",
+					{speed = settings.sprint_speed, jump = settings.sprint_jump})
+			pova.do_override(player)
+		else
+			pova.del_override(player:get_player_name(), "stamina:physics")
+			pova.do_override(player)
 		end
 	else
 		local def
