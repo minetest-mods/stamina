@@ -528,7 +528,7 @@ minetest.register_on_joinplayer(function(player)
 	local level = stamina.get_saturation(player) or settings.visual_max
 	local id = player:hud_add({
 		name = "stamina",
-		type = "statbar",
+		[minetest.features.hud_def_type_field and "type" or "hud_elem_type"] = "statbar",
 		position = {x = 0.5, y = 1},
 		size = {x = 24, y = 24},
 		text = "stamina_hud_fg.png",
