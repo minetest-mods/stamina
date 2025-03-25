@@ -54,7 +54,7 @@ stamina.register_on_exhaust_player(function(player, change, cause))
     If the callback returns True, no further callbacks are called,
     and the default behavior is bypassed.
 ------------------------
-stamina.set_sprinting(name, sprinting)
+stamina.set_sprinting(player, sprinting)
     Sets whether a player is sprinting or not.
     Callbacks are processed before setting sprint status.
 
