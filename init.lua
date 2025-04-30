@@ -6,12 +6,13 @@ end
 stamina = {}
 local modname = minetest.get_current_modname()
 local dirt_texture = ""
-if minetest.get_modpath("xcompat") and minetest.global_exists("xcompat") then
-	dirt_texture = xcompat.textures.grass.dirt
-else
-    dirt_texture = "default_dirt.png"
+if core.get_modpath("xcompat") and core.global_exists("xcompat") then
+    dirt_texture = xcompat.textures.grass and xcompat.textures.grass.dirt
+        or (xcompat.textures.dirt and xcompat.textures.dirt.grass)
 end
-local dirt_texture = xcompat.textures.dirt.grass
+if not dirt_texture or dirt_texture == "" then
+    dirt_texture = "[fill:2x16:0,0:#654321"
+end
 local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
 local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.global_exists("player_monoids")
 local pova_mod = minetest.get_modpath("pova") and minetest.global_exists("pova")
@@ -328,7 +329,7 @@ function stamina.set_sprinting(player, sprinting)
 				maxsize = 1.0,
 				vertical = false,
 				collisiondetection = false,
-				texture = dirt_texture,
+				texture = dirt_texture or "[fill:2x16:0,0:#654321]",
 			})
 		end
 	end
