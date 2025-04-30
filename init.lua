@@ -1,6 +1,6 @@
 if not minetest.settings:get_bool("enable_damage") then
-	minetest.log("warning", "[stamina] Stamina will not load if damage is disabled (enable_damage=false)")
-	return
+    minetest.log("warning", "[stamina] Stamina will not load if damage is disabled (enable_damage=false)")
+    return
 end
 
 stamina = {}
@@ -9,8 +9,9 @@ local modname = minetest.get_current_modname()
 
 local dirt_texture = ""
 if core.get_modpath("xcompat") and core.global_exists("xcompat") then
-        dirt_texture = xcompat.textures.grass and xcompat.textures.grass.dirt or (xcompat.textures.dirt and xcompat.textures.dirt.grass)
+    dirt_texture = xcompat.textures.grass and xcompat.textures.grass.dirt or (xcompat.textures.dirt and xcompat.textures.dirt.grass)
 end
+
 if not dirt_texture or dirt_texture == "" then
     dirt_texture = "[fill:2x16:0,0:#654321"
 end
@@ -24,11 +25,11 @@ function stamina.log(level, message, ...)
 end
 
 local function get_setting(key, default)
-        local value = minetest.settings:get("stamina." .. key)
-        local num_value = tonumber(value)
-        if value and not num_value then
-            stamina.log("warning", "Invalid value for setting %s: %q. Using default %q.", key, value, default)
-        end
+    local value = minetest.settings:get("stamina." .. key)
+    local num_value = tonumber(value)
+    if value and not num_value then
+        stamina.log("warning", "Invalid value for setting %s: %q. Using default %q.", key, value, default)
+    end
     return num_value or default
 end
 
@@ -321,7 +322,7 @@ function stamina.set_sprinting(player, sprinting)
     elseif pova_mod then
         if sprinting then
             pova.add_override(player:get_player_name(), "stamina:physics",
-                    {speed = settings.sprint_speed, jump = settings.sprint_jump})
+                {speed = settings.sprint_speed, jump = settings.sprint_jump})
             pova.do_override(player)
         else
             pova.del_override(player:get_player_name(), "stamina:physics")
@@ -333,15 +334,15 @@ function stamina.set_sprinting(player, sprinting)
             -- Get player physics from 3d_armor mod
             local name = player:get_player_name()
             def = {
-                speed=armor.def[name].speed,
-                jump=armor.def[name].jump,
-                gravity=armor.def[name].gravity
+                speed = armor.def[name].speed,
+                jump = armor.def[name].jump,
+                gravity = armor.def[name].gravity
             }
         else
             def = {
-                speed=1,
-                jump=1,
-                gravity=1
+                speed = 1,
+                jump = 1,
+                gravity = 1
             }
         end
 
@@ -383,7 +384,7 @@ end
 
 -- Time based stamina functions
 local function move_tick()
-    for _,player in ipairs(minetest.get_connected_players()) do
+    for _, player in ipairs(minetest.get_connected_players()) do
         local controls = player:get_player_control()
         local is_moving = controls.up or controls.down or controls.left or controls.right
         local velocity = player:get_velocity()
@@ -419,7 +420,7 @@ end
 
 local function stamina_tick()
     -- lower saturation by 1 point after settings.tick second(s)
-    for _,player in ipairs(minetest.get_connected_players()) do
+    for _, player in ipairs(minetest.get_connected_players()) do
         local saturation = stamina.get_saturation(player)
         if saturation > settings.tick_min then
             stamina.update_saturation(player, saturation - 1)
@@ -429,7 +430,7 @@ end
 
 local function health_tick()
     -- heal or damage player, depending on saturation
-    for _,player in ipairs(minetest.get_connected_players()) do
+    for _, player in ipairs(minetest.get_connected_players()) do
         local air = player:get_breath() or 0
         local hp = player:get_hp()
         local hp_max = player:get_properties().hp_max
@@ -509,10 +510,8 @@ local function show_eat_particles(player, itemname)
 
     if texture and texture ~= "" then
         particle_def.texture = texture
-
     elseif def.type == "node" then
         particle_def.node = {name = itemname, param2 = 0}
-
     else
         particle_def.texture = "blank.png"
     end
