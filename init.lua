@@ -12,7 +12,7 @@ if core.get_modpath("xcompat") and core.global_exists("xcompat") then
         dirt_texture = xcompat.textures.grass and xcompat.textures.grass.dirt or (xcompat.textures.dirt and xcompat.textures.dirt.grass)
 end
 if not dirt_texture or dirt_texture == "" then
-        dirt_texture = "[fill:2x16:0,0:#654321"
+    dirt_texture = "[fill:2x16:0,0:#654321"
 end
 
 local armor_mod = minetest.get_modpath("3d_armor") and minetest.global_exists("armor") and armor.def
@@ -20,7 +20,7 @@ local player_monoids_mod = minetest.get_modpath("player_monoids") and minetest.g
 local pova_mod = minetest.get_modpath("pova") and minetest.global_exists("pova")
 
 function stamina.log(level, message, ...)
-        return minetest.log(level, ("[%s] %s"):format(modname, message:format(...)))
+    return minetest.log(level, ("[%s] %s"):format(modname, message:format(...)))
 end
 
 local function get_setting(key, default)
